@@ -1,0 +1,50 @@
+---
+title: "Robust Gaussian Processes in Stan"
+output: html_notebook
+---
+
+# Based on https://betanalpha.github.io/assets/case_studies/gp_part1/part1.htm
+
+# Prelim
+```{r}
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores(logical = F) - 1)  # get the number of physical cores
+
+```
+
+# Define the GP hyperparameters, Gaussian measurement variation, and covariates for evaluation
+```{r}
+source("gp_utility.R")
+
+alpha_true <- 3
+rho_true <- 5.5
+sigma_true <- 2
+
+N_total = 501
+x_total <- 20 * (0:(N_total - 1)) / (N_total - 1) - 10
+
+# Define data as a list for simulation later
+simu_data <- list(alpha=alpha_true, rho=rho_true, sigma=sigma_true,
+                  N=N_total, x=x_total)
+
+```
+
+# Have a look at the .stan for simulation
+```{r}
+
+writeLines(readLines("simu_gauss.stan"))
+
+```
+
+# Fit the model with Stan
+```{r}
+
+system.time({
+simu_fit <- stan(file='simu_gauss.stan', data=simu_data, iter=1,
+            chains=2, seed=494838, algorithm="Fixed_param")
+})
+
+```
+
