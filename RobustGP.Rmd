@@ -4,13 +4,19 @@ output: html_notebook
 ---
 
 # Based on https://betanalpha.github.io/assets/case_studies/gp_part1/part1.htm
+# https://betanalpha.github.io/assets/case_studies/gp_part1/part1.html#3_gaussian_processes_in_stan
 
 # Prelim
 ```{r}
+
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
 # The following can affect distributional computing over a cluster
+#options(mc.cores = parallel::detectCores())  # 
 options(mc.cores = parallel::detectCores(logical = F) - 1)  # get the number of physical cores
+
+# The following throws an error in compiling .stan
+Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
 
 ```
 
@@ -18,11 +24,19 @@ options(mc.cores = parallel::detectCores(logical = F) - 1)  # get the number of 
 ```{r}
 source("gp_utility.R")
 
+# We model a univariate function f(.) as a realized 'point' of the Gaussian Process GP(0, k), where y = f(x) is a point of the realized 'point' (ie, function) f
+# assume an exponentiated quadratic kernel for GP's covariance function: 
+#   k(x1,x2) = (α^2)*exp( −(x1−x2)^2 / ρ^2 )
+# For any given N observations of (x,y) collected from the function f(), the marginalized covariance matrix is k(x_i,x_j) and the posterior has the updated kernel:   
+#    k′(x1,x2)=k(x1,x2)+σ^2*δ(x1−x2), where δ(0)=1 and vanishes for all other values.
+
 alpha_true <- 3
 rho_true <- 5.5
 sigma_true <- 2
 
 N_total = 501
+# (0:(N_total - 1)) / (N_total - 1) gives a vector of 501 evenly spaced points from 0:1
+# 20* . - 1 turns the range to -10:10
 x_total <- 20 * (0:(N_total - 1)) / (N_total - 1) - 10
 
 # Define data as a list for simulation later
@@ -32,19 +46,167 @@ simu_data <- list(alpha=alpha_true, rho=rho_true, sigma=sigma_true,
 ```
 
 # Have a look at the .stan for simulation
-```{r}
+```{r eval=F}
 
 writeLines(readLines("simu_gauss.stan"))
 
 ```
 
-# Fit the model with Stan
+# Simulate the (y,x) observations using Stan according to the model in .stan
 ```{r}
 
-system.time({
+# algorithm="Fixed_param": This means simulation, not estimation of parameters (?)
+
+#system.time({
 simu_fit <- stan(file='simu_gauss.stan', data=simu_data, iter=1,
-            chains=2, seed=494838, algorithm="Fixed_param")
+            chains=1, seed=494838, algorithm="Fixed_param")
+#})
+
+```
+
+# Reserve 11 evenly spaced points from the 501 sampled as train data and the rest as held-out data.
+```{r}
+
+# extract the simulated f(x) and simulated y 
+f_total <- extract(simu_fit)$f[1,]
+y_total <- extract(simu_fit)$y[1,]
+
+# put the truly underlying function (f(x),x) in the form of a dataframe 
+true_realization <- data.frame(f_total, x_total)
+names(true_realization) <- c("f_total", "x_total")
+
+# get the evenlly spaced 11 observations as the train data
+# > 50*(0:10)+1
+# [1]   1  51 101 151 201 251 301 351 401 451 501
+observed_idx <- c(50*(0:10)+1)
+N = length(observed_idx)    # redefine N to use as the length of the train data vector
+x <- x_total[observed_idx]  # assign the train data (y,x)
+y <- y_total[observed_idx]
+
+# use base plot to plot the underlying f() as the mean function of the observed y 
+plot(x_total, f_total, type="l", lwd=2, xlab="x", ylab="y",
+     xlim=c(-10, 10), ylim=c(-10, 10))
+points(x_total, y_total, col="white", pch=16, cex=0.6)
+points(x_total, y_total, col=c_mid_teal, pch=16, cex=0.4)
+points(x, y, col="white", pch=16, cex=1.2)
+points(x, y, col="black", pch=16, cex=0.8)
+
+```
+
+# Show the .stan for simulation when y is Poisson-distributed (thus, no closed-form posterior) 
+```{r}
+
+# When the observation model is non-Gaussian, the posterior GP no longer has a closed form kernel. 
+# Thus, need to construct the multivariate Gaussian distribution joint over all of the covariates within the model itself. 
+# Then, allow the fit to explore the conditional realizations.
+# Consider, eg, a Poisson observation model where the GP models the log rate,
+
+writeLines(readLines("simu_poisson.stan"))
+
+```
+
+# Simulate the (y,x) observations using Stan according to the new Poisson model in .stan
+```{r}
+
+simu_fit <- stan(file='simu_poisson.stan', data=simu_data, iter=1,
+            chains=1, seed=494838, algorithm="Fixed_param")
+
+```
+
+# Again, reserve 11 evenly spaced points from the 501 sampled as train data and the rest as held-out data.
+```{r}
+
+f_total <- extract(simu_fit)$f[1,]
+y_total <- extract(simu_fit)$y[1,]
+
+true_realization <- data.frame(exp(f_total), x_total)
+names(true_realization) <- c("f_total", "x_total")
+
+sample_idx <- c(50*(0:10)+1)
+N = length(sample_idx)
+x <- x_total[sample_idx]
+y <- y_total[sample_idx]
+
+# N_predict and x_predict will be referred to later in the MCMC step 
+N_predict <- N_total  
+x_predict <- x_total
+y_predict <- y_total
+# save the data for later user (?)
+data = list("N"=N, "x"=x, "y"=y,
+             "N_predict"=N_predict, "x_predict"=x_total, "y_predict"=y_total)
+
+plot(x_total, exp(f_total), type="l", lwd=2, xlab="x", ylab="y",
+     xlim=c(-10, 10), ylim=c(0, 10))
+points(x_total, y_total, col="white", pch=16, cex=0.6)
+points(x_total, y_total, col=c_mid_teal, pch=16, cex=0.4)
+points(x, y, col="white", pch=16, cex=1.2)
+points(x, y, col="black", pch=16, cex=0.8)
+
+```
+
+# Need to fit the latent GP with MCMC in Stan because the model is no longer conjugate
+```{r}
+
+# Since the posterior distribution of f(x) given the observation of the 11 train data has no analytical closed form, there's not a way to invert the latent GP analytically.
+# Hence, MCMC is needed to do this inversion in a computational statistical way.
+
+writeLines(readLines("predict_poisson.stan"))
+
+```
+
+# Now, use MCMC to match the observed y in order to invert the latent GP
+```{r}
+
+# Recall that N has been redefined to use as the length of the train data vector (ie, the observed y)
+pred_data <- list(alpha=alpha_true, rho=rho_true,
+                  N_predict=N_predict, x_predict=x_predict,
+                  N_observed=N, y_observed=y, observed_idx=observed_idx)
+system.time({
+pred_fit <- stan(file='predict_poisson.stan', data=pred_data, seed=5838298, refresh=1000)
 })
+
+```
+
+# Visualize posterior GP with sampled realizations once fitted
+```{r}
+
+plot_gp_realizations(pred_fit, data, true_realization,
+                     "Posterior Realizations")
+```
+
+# Or Visualize quantiles of those realizations as a function of the input covariate,
+```{r}
+
+plot_gp_quantiles(pred_fit, data, true_realization,
+                  "Posterior Quantiles")
+
+```
+
+# visualize posterior predictive distribution incorporating the Gaussian measurement variation with realizations
+```{r}
+
+plot_gp_realizations(pred_fit, data, true_realization,
+                     "Posterior Predictive Realizations")
+
+```
+
+# Or visualize quantiles
+```{r}
+
+plot_gp_pred_quantiles(pred_fit, data, true_realization,
+                  "Posterior Predictive Quantiles")
+
+```
+
+# Conclusion
+```{r}
+
+# But how exactly do we specify a covariance function? Not only do we have to choose a functional form, we also have to select the hyperparameters. The specific value of these hyperparameters, however, can have a drastic effect on the performance of the resulting Gaussian process. In order to ensure optimal performance we will have to infer the hyperparameters from the observed data. Unfortunately that turns out to be no easy feat.
+
+# In Parts 2 and 3 of this case study we’ll investigate how to infer Gaussian process hyperparameters with maximum marginal likelihood and Bayesian inference, paying particular attention to what can go wrong and how we can maintain robust performance.
+
+# Part 2: Optimizing Gaussian Processes Hyperparameters 
+# Part 3: Bayesian Inference of Gaussian Processes Hyperparameters
 
 ```
 
