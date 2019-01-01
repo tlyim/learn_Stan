@@ -1,0 +1,189 @@
+---
+title: "Getting Started Eight-School Example"
+output: html_notebook
+---
+
+# This is a modified version of 
+the Getting Started Eight-School Example: 
+https://github.com/rmcelreath/cmdstan_map_rect_tutorial 
+
+# Load packages
+```{r}
+library(here)
+library(magrittr)
+library(tidyverse)
+
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+# Look up the equivalent in Stan
+```{r}
+
+lookup("dnorm")
+#     StanFunction                         Arguments ReturnType Page
+# 367  normal_lpdf (reals y | reals mu, reals sigma)       real  111
+# 368       normal                                 ~       real  111
+
+
+```
+
+# Prepare data
+```{r}
+
+# Or, the data argument can be omitted and R will search for objects that have the same names as those declared in the data block of the Stan program.
+
+schools_data <- list(
+  J = 8,
+  y = c(28,  8, -3,  7, -1,  1, 18, 12),
+  sigma = c(15, 10, 16, 11,  9, 11, 10, 18)
+)
+
+```
+
+# Stan code chunk specifying the model (with a stanfit object as the output)
+```{stan output.var=schools, eval=F}
+
+data {
+  int<lower=0> J;          // number of schools 
+  real y[J];               // estimated treatment effects
+  real<lower=0> sigma[J];  // s.e. of effect estimates 
+}
+parameters {
+  real mu; 
+  real<lower=0> tau;
+  vector[J] eta;
+}
+transformed parameters {
+  vector[J] theta;
+  theta = mu + tau * eta;
+}
+model {
+  target += normal_lpdf(eta | 0, 1);
+  target += normal_lpdf(y | theta, sigma);
+}
+
+```
+
+# Draw posterior samples
+```{r}
+
+# The Stan modeling language distinguishes between integers and doubles (type int and real in Stan modeling language, respectively).
+
+system.time({
+fit1 <- stan(
+  file = "schools.stan",  # Stan program
+  data = schools_data,    # named list of data
+  control = list(adapt_delta = 0.8),    # adjust when there're divergent transitions after warmup
+#  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 2000,            # total number of iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+})
+
+# The stan function accepts the optional argument fit, which can be used to pass an existing fitted model object so that the compiled model is reused. When reusing a previous fitted model, we can still specify different values for the other arguments to stan, including passing different data to the data argument.
+
+# For users working with a different parallelization scheme (perhaps with a remote cluster), the rstan package provides a function called sflist2stanfit for consolidating a list of multiple stanfit objects (created from the same Stan program and using the same number of warmup and sampling iterations) into a single stanfit object. It is important to specify the same seed for all the chains and equally important to use a different chain ID (argument chain_id), the combination of which ensures that the random numbers generated in Stan for all chains are essentially independent. 
+# This is handled automatically (internally) when ‘cores‘>1.
+
+###########################################################
+# Warning: There were 2 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help: 
+#   control = adapt_delta (double, between 0 and 1, defaults to 0.8)
+# See # http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+# Warning: Examine the pairs() plot to diagnose sampling problems
+
+
+# A single call to stan performs all three steps, but they can also be executed one by one 
+# (see the help pages for stanc, stan_model, and sampling), which can be useful for debugging. 
+```
+
+
+# Plot methods for the stanfit object
+```{r}
+
+# plot confidence intervals at 80% and 95% of the first 10 parameters by default
+plot(fit1)   # ci_level: 0.8 (80% intervals), outer_level: 0.95 (95% intervals)
+
+# plot the time series of the posterior draws.
+traceplot(fit1, pars = c("mu", "tau"), inc_warmup = TRUE, nrow = 2)
+
+```
+
+# Further examination of the stanfit object
+```{r}
+
+# To assess the convergence of the Markov chains, in addition to visually inspecting traceplots we can calculate the split Rhat statistic. 
+# Split Rhat is an updated version of the Rhat statistic proposed in Gelman and Rubin (1992) that is based on splitting each chain into two halves. 
+
+#print(fit1, pars=c("theta", "mu", "tau", "lp__"), probs=c(.1,.5,.9))
+print(fit1, pars = c("mu", "tau", "theta", "lp__"))
+# The summaries for the parameters shown by the print method are calculated using only post-warmup draws.
+
+summary(fit1)
+
+```
+
+# Diagnose Sampling Difficulties
+```{r}
+# best way to visualize the output of a model is through the ShinyStan interface, which can be accessed via the shinystan R package: https://cran.r-project.org/web/packages/shinystan/vignettes/shinystan-package.html
+# The rstanarm and brms packages provide launch_shinystan methods for stanreg and brmsfit objects, respectively.
+
+library(shinystan)
+sso <- launch_shinystan(fit1)
+
+# # add a new parameter/quantity as a function of one or two existing parameters to your shinystan object by using the generate_quantity function
+# sso <- generate_quantity(sso, fun = function(x,y) (x-y)^2,
+#                        param1 = "mu", param2 = "tau", new_name = "delta")
+
+```
+
+# Return information on parameters related the performance of the sampler:
+```{r}
+
+# all chains combined
+sampler_params <- get_sampler_params(fit1, inc_warmup = TRUE)
+summary(do.call(rbind, sampler_params), digits = 2)
+
+# each chain separately
+lapply(sampler_params, summary, digits = 2)
+
+# When there are a small number of divergent transitions, they are identified by divergent__ being 1. Ideally, there should be no divergent transitions after the warmup phase. 
+# The best way to try to eliminate divergent transitions is by increasing the target acceptance probability, which by default is 0.8. In this case the mean of accept_stat__ is close to 0.8 for all chains, but has a very skewed distribution because the median is near 0.95. 
+# Can go back and call stan again and specify the optional argument control=list(adapt_delta=0.9) to try to eliminate the divergent transitions. 
+
+# However, sometimes when the target acceptance rate is high, the stepsize is very small and the sampler hits its limit on the number of leapfrog steps it can take per iteration. In this case, it is a non-issue because each chain has a treedepth__ of at most 7 and the default is 10. 
+# But if any treedepth__ were 11, then it would be wise to increase the limit by passing control=list(max_treedepth=12) (for example) to stan. See the vignette on stanfit objects for more on the structure of the object returned by get_sampler_params.
+
+
+```
+
+# pairs plot shows whether any sampling difficulties are occurring in the tails or near the mode
+```{r}
+
+# The “pairs” plot can be used to get a sense of whether any sampling difficulties are occurring in the tails or near the mode:
+
+pairs(fit1, pars = c("mu", "tau", "lp__"), las = 1)
+
+#  Ideally, the below-diagonal intersection and the above-diagonal intersection of the same two variables should have distributions that are mirror images of each other. 
+# Any yellow points would indicate transitions where the maximum treedepth__ was hit, and red points indicate a divergent transition.
+```
+
+
+```{r}
+
+# can run many of the BUGS examples and some others that we have created in Stan by executing the following and  choosing an example model from the list that pops up. 
+
+model <- stan_demo()
+
+# The first time you call stan_demo(), it will ask you if you want to download these examples. You should choose option 1 to put them in the directory where rstan was installed so that they can be used in the future without redownloading them. The model object above is an instance of class stanfit, so you can call print, plot, pairs, extract, etc. on it afterward.
+
+```
+
