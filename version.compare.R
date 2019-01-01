@@ -27,7 +27,7 @@ r <- switch(
   Sys.info()[["sysname"]],
   Windows = c(
     "c:/program files/Microsoft/R Open/R-3.5.1/bin/x64/Rscript.exe", 
-    #    "c:/program files/R/R-testing/bin/x64/Rscript.exe",
+    "c:/program files/R/R-testing/bin/x64/Rscript.exe",
     "c:/program files/R/R-3.5.1/bin/x64/Rscript.exe"
   )
   # ,

@@ -7,8 +7,8 @@ output: html_notebook
 # Multithreading and Map-Reduce in Stan 2.18.0: A Minimal Example
 ## v1 (19 Sep 2018)
 
-This is a beginner tutorial for using cmdstan with multithreading
-by Richard McElreath: https://github.com/rmcelreath/cmdstan_map_rect_tutorial 
+This is a modified version of 
+the beginner tutorial for using cmdstan with multithreading by Richard McElreath: https://github.com/rmcelreath/cmdstan_map_rect_tutorial 
 
 # Load packages
 ```{r}
@@ -27,24 +27,39 @@ table( d$redCards )  # build a contingency table of the counts at each combinati
 out_data <- d %>% 
   filter(!is.na(rater1)) %>% 
   sample_n(9999) %>% 
-  select(n_redcards = redCards, n_games = games, rating = rater1) %>% 
-  list()
-
-out_data$N <- out_data[[1]] %>% 
-  nrow()
+  select(n_redcards = redCards, n_games = games, rating = rater1) 
+  
+out_data <- list(N = out_data %>% nrow(), as.list(out_data)) %>% flatten()
 
 library(rstan)
-#options(mc.cores = parallel::detectCores() - 1) # For execution on a local, multicore CPU with excess RAM 
-rstan_options(auto_write = TRUE)  # avoid recompilation of unchanged Stan programs
+options(mc.cores = parallel::detectCores()) # For execution on a local, multicore CPU with excess RAM 
+rstan_options(auto_write = T)  # avoid recompilation of unchanged Stan programs
 #Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time
 
 ```
 
 
 # Baseline example of Stan model
-```{stan output.var=model_code}
+```{r}
 
-data {
+writeLines(readLines("McElreath_eg.stan"))
+
+```
+
+# Fit the baseline model from the .stan file
+```{r}
+
+m0 <- stan(file = 'McElreath_eg.stan', data=out_data, seed=7654321, refresh=1000, chains = 1)  
+
+
+```
+
+# Stan code chunk specifying the model (with a stanfit object as the output)
+```{stan output.var = McElreath_eg}
+
+// .stan for McElreath_Example_Multithreading.Rmd
+
+ data {
   int N;
   int n_redcards[N];
   int n_games[N];
@@ -62,11 +77,10 @@ model{
 
 ```
 
+# Fit the baseline model from the stanfit object created from the Stan code chunk
+```{r}
 
-# Fit the Stan model
-```{R}
+m1 <- stan(model_code = McElreath_eg@model_code, data=out_data, seed=7654321, refresh=1000, chains = 1)  
 
-m0 <- stan(fit = model_code, data=out_data, chains = 1)
 
 ```
-
