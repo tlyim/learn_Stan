@@ -11,12 +11,13 @@ output: html_notebook
 
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
 # The following can affect distributional computing over a cluster
-#options(mc.cores = parallel::detectCores())  # 
-options(mc.cores = parallel::detectCores(logical = F) - 1)  # get the number of physical cores
+options(mc.cores = parallel::detectCores())  # 
+#options(mc.cores = parallel::detectCores(logical = F) - 1)  # get the number of physical cores
 
 # The following throws an error in compiling .stan
-Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
 
 ```
 
@@ -185,6 +186,7 @@ plot_gp_quantiles(pred_fit, data, true_realization,
 # visualize posterior predictive distribution incorporating the Gaussian measurement variation with realizations
 ```{r}
 
+# Why is this the same as the visualization a couple of steps earlier?
 plot_gp_realizations(pred_fit, data, true_realization,
                      "Posterior Predictive Realizations")
 
