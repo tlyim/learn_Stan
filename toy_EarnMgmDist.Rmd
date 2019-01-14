@@ -1,0 +1,158 @@
+---
+title: "[b]lavaan[Plot] Example for a Toy EarnMgmt/Dist Model"
+output: html_notebook
+---
+
+See also the more manual way to create customized *DiagrammeR* graphs and render as *Graphiviz* diagrams:
+https://rstudio-pubs-static.s3.amazonaws.com/78926_5aa94ae32fae49f3a384ce885744ef4a.html
+
+# Load packages
+```{r}
+
+library(here)
+#library(psych)
+library(tidyverse)
+library(magrittr)
+
+library(lavaan)
+library(blavaan)
+library(lavaanPlot)
+```
+
+# Simulated data
+```{r}
+
+N = 501
+
+set.seed(4321)
+sim0.data <- data.frame(t = 0:(N-1)) %>% 
+  mutate(sales = rexp(N, 2), 
+         sales.L1 = lag(sales), 
+         GSL = -1 + sales/sales.L1,
+         GSL.L1 = lag(GSL),
+         TA = rnorm(N, 0, 0.3) %>% abs() %>% pmax(., 0.5*sales) %>% sort(), 
+         expenses = 0.2*TA + 0.6*sales, 
+         TA = TA - 0.2*TA, # revised TA
+         TA.L1 = lag(TA),     # revised TA.L1     
+         Earn = rnorm(N, 0, 0.2) + sales - expenses, Earn.L1 = lag(Earn),
+         CFO = runif(N, 0.7*sales, sales) - runif(N, 0.8*expenses, expenses), 
+         TAcc = Earn - CFO) %>% 
+  drop_na()
+
+mod.DA <- lm(TAcc ~ sales + sales.L1 + TA, data = sim0.data)
+broom::augment_columns(mod.DA, data = sim0.data)
+
+sim.data <- sim0.data %>% 
+  mutate(NDA = mod.DA$fitted.values, 
+         DA = mod.DA$residuals,
+         Upsmallprofit = 0.15*sd(Earn),
+         posNclose2zero = ifelse( Earn > Upsmallprofit, 0, ifelse(Earn < 0, 0, 1 - Earn/Upsmallprofit) ),
+         Dsmallprofit = ifelse(posNclose2zero > 0, 1, 0) 
+         )
+
+psych::describe(sim.data)
+
+ggplot(sim.data, aes(t)) +
+  geom_hline(yintercept=0, color = "black") +
+  geom_line(aes(y = sales, colour = "sales")) + 
+  geom_line(aes(y = expenses, colour = "expenses")) + 
+  geom_line(aes(y = TA, colour = "TA"))
+#  geom_line(aes(y = GSL, colour = "GSL")) + 
+  
+  
+ggplot(sim.data, aes(t)) +
+  geom_hline(yintercept=0, color = "black") +
+  geom_line(aes(y = DA, colour = 'DA'), size = 1.2) +
+  geom_line(aes(y = CFO, colour = 'CFO')) +
+  geom_line(aes(y = Earn, colour = 'Earn')) #+ ylim(-5,25)
+  
+```
+
+# Toy EarnMgmt/Dist Model estimated with lavaan
+```{r}
+
+# Dsmallprofit is binary 
+
+mod.em <- ' # measurement model
+            EM =~ NA*DA + Dsmallprofit   
+            TrueEarn =~ CFO
+
+            # regressions
+#            EM ~ GSL.L1 + Earn.L1 + TrueEarn +
+            Earn ~ TrueEarn + EM
+
+            # residual correlations
+            # CFO ~~ 1*CFO 
+          '
+
+fit <- sem(mod.em, data=sim.data, ordered=c("Dsmallprofit"))
+
+summary(fit, fit.measures=TRUE)
+
+```
+
+# Toy EarnMgmt/Dist Model estimated with blavaan
+```{r}
+
+# default prior normal(0,10) is too wide for DA
+# binary smallprofit should not be used 
+
+
+# measurement model   prior("dnorm(0,0.2)[sd]")*   prior("dgamma(7.5,1.0)")*
+#            EM ~ GSL.L1 + Earn.L1 + TrueEarn +
+
+mod.em <- ' EM =~ DA + posNclose2zero 
+            TrueEarn =~ CFO
+
+            # regressions
+            Earn ~ TrueEarn + EM + TrueEarn * EM
+            TAcc ~ TrueEarn + CFO
+            
+            # residual correlations
+            CFO ~~ 1*CFO 
+          '
+options(mc.cores = parallel::detectCores())  # 
+
+fit <- bsem(mod.em, data=sim.data, 
+            n.chains = 3, 
+            burnin = 1000, 
+            sample = 2000, 
+#            inits = "prior",
+            target = "stan",
+bcontrol = list(refresh = 1000),
+            save.lvs = TRUE,
+            mcmcfile = TRUE
+            )
+# unknown pars:       bcontrol = list(adapt_delta = 0.9),
+
+summary(fit, psrf=TRUE, neff=TRUE)
+
+```
+
+
+
+# Model with mediation: http://lavaan.ugent.be/tutorial/mediation.html
+```{r}
+set.seed(1234)
+X <- rnorm(100)
+M <- 0.5*X + rnorm(100)
+Y <- 0.7*M + rnorm(100)
+Data <- data.frame(X = X, Y = Y, M = M)
+model <- ' # direct effect
+             Y ~ c*X
+           # mediator
+             M ~ a*X
+             Y ~ b*M
+           # indirect effect (a*b)
+             ab := a*b
+           # total effect
+             total := c + (a*b)
+         '
+fit <- sem(model, data = Data)
+summary(fit)
+
+lavaanPlot(model = fit)
+
+lavaanPlot(model = fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = F)
+
+```
