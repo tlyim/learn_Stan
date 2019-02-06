@@ -1,0 +1,53 @@
+---
+title: "higher-order functions"
+output: html_notebook
+---
+
+
+```{r}
+
+# Generate some fake data
+eps <- rnorm(10, sd= 5)
+x <- c(1:10)
+y <- 2+2*x + eps
+
+# Load libraries required
+library(quantreg)
+library(magrittr)
+eps <- rnorm(10, sd= 5)
+x <- c(1:10)
+y <- 2+2*x + eps
+
+# create a higher order function
+higher_order_function <- function(func){
+func(y ~ x) %>% summary
+}
+
+# Give as an argument the function "lm"
+higher_order_function(lm)
+
+
+# Now give as an argument the function rq (for regression quantile)
+higher_order_function(rq)
+
+higher_order_function(mm)
+
+```
+
+afjldkgaf;; *ndfkd* _*jskfkdjfla*_
+
+```{r}
+if_function <- function(x,y, which_reg){ 
+  if (which_reg== "OLS") { lm(y~x) %>% summary }
+  else if (which_reg== "LAD") { rq(y~x) %>% summary }
+  } 
+
+if_function(x,y, which_reg= "OLS")
+
+
+if_function(x,y, which_reg= "LAD")
+```
+
+
+
+
