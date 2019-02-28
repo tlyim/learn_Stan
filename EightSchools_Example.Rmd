@@ -154,7 +154,7 @@ traceplot(fit1, pars = c("mu", "tau"), inc_warmup = TRUE, nrow = 2)
 # Split Rhat is an updated version of the Rhat statistic proposed in Gelman and Rubin (1992) that is based on splitting each chain into two halves. 
 
 #print(fit1, pars=c("theta", "mu", "tau", "lp__"), probs=c(.1,.5,.9))
-print(fit1, pars = c("mu", "tau", "theta", "lp__"))
+print(fit1, pars = c("mu", "tau", "theta", "lp__"), digits = 3) #, probs = c(.05,.95))
 # The summaries for the parameters shown by the print method are calculated using only post-warmup draws.
 
 summary(fit1)
