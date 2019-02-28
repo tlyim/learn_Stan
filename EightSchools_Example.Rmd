@@ -79,10 +79,12 @@ model {
 
 system.time({
 fit1 <- stan(
-  file = "schools.stan",  # Stan program
+#  file = "schools.stan",  # Stan program
+  model_code = schools@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
   data = schools_data,    # named list of data
-  control = list(adapt_delta = 0.8),    # adjust when there're divergent transitions after warmup
-#  chains = 4,             # number of Markov chains
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
   warmup = 1000,          # number of warmup iterations per chain
   iter = 2000,            # total number of iterations per chain
   refresh = 1000          # = 0 means no progress shown
