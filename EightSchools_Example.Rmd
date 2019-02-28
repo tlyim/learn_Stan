@@ -51,6 +51,8 @@ schools_data <- list(
 # Stan code chunk specifying the model (with a stanfit object as the output)
 ```{stan output.var=schools, eval=F}
 
+// RStan provides the expose_stan_functions function for exporting such functions to the R global environment so that they can be tested in R to ensure they are working properly. 
+
 data {
   int<lower=0> J;          // number of schools 
   real y[J];               // estimated treatment effects
