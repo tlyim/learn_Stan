@@ -77,6 +77,28 @@ model {
 # Draw posterior samples
 ```{r}
 
+# Run the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = schools@model_code, data=schools_data, iter=10, chains=1)
+# Run the full model and refer to the debug model to save compilation time 
+fit1 <- stan(
+#  file = "schools.stan",  # Stan program
+  model_code = schools@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
+  data = schools_data,    # named list of data
+  fit = fit0_debug,   # to save compilation time if the debug model was run
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 2000,            # total number of iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+
+
+###################################################################
 # The Stan modeling language distinguishes between integers and doubles (type int and real in Stan modeling language, respectively).
 
 system.time({
@@ -86,7 +108,11 @@ fit1 <- stan(
                                     # or the name of a string object containing the model description
   data = schools_data,    # named list of data
 #  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
-#  chains = 1,             # default is 4 Markov chains
+  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
   warmup = 1000,          # number of warmup iterations per chain
   iter = 2000,            # total number of iterations per chain
   refresh = 1000          # = 0 means no progress shown
