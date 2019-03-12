@@ -1,0 +1,707 @@
+---
+title: "Hierarchical Partial Pooling for Repeated Binary Trials (Bob Carpenter)"
+output: html_notebook
+---
+
+```{r}
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+# data from Table 1 of (Efron and Morris 1975); drawn from the 1970 Major League Baseball season from both leagues
+```{r}
+
+df <- read.csv("efron-morris-75-data.tsv", sep="\t") %>% 
+  mutate(RemainingHits = SeasonHits - Hits) %>% 
+  select(FirstName, LastName, Hits, At.Bats, RemainingAt.Bats, RemainingHits)
+
+```
+
+# Will be using the remaining hits and at bats to evaluate the predictive inferences for the various models
+  (data separates the outcome from the initial 45 at-bats from the rest of the season)
+```{r}
+
+pool_data <- list(
+  N = nrow(df),
+  K = df$At.Bats,
+  y = df$Hits,
+  K_new = df$RemainingAt.Bats,
+  y_new = df$RemainingHits
+)
+
+```
+
+# Complete pooling: single parameter ϕ (phi) representing the chance of success for all items 
+```{stan output.var=completepool, eval=T}
+// From a population model perspective, complete pooling corresponds to *zero* population variance.
+
+data {
+  int<lower=0> N;           // items
+  int<lower=0> K[N];        // initial trials (K is a N-size vector)
+  int<lower=0> y[N];        // initial successes (y is a N-size vector)
+
+  int<lower=0> K_new[N];    // new trials
+  int<lower=0> y_new[N];    // new successes 
+}
+
+// sampling distribution for each player’s number of hits y_n is modeled as
+//    p(y_n|ϕ) = Binomial(y_n|K_n,ϕ).
+//
+// For given ϕ, the joint likelihood of seeing a total of y_n successes from player n's K_n new trials for 
+//   all the N players, with y = y_1 + ... + y_N, is 
+//    p(y|ϕ) = ∏{N,n=1} Binomial(y_n|K_n,ϕ)
+
+transformed data { 
+  real min_y;   // minimum successes 
+  real max_y;   // maximum successes 
+  real mean_y;  // sample mean successes 
+  real sd_y;    // sample std dev successes 
+
+  min_y = min(y); 
+  max_y = max(y); 
+  mean_y = mean(to_vector(y)); 
+  sd_y = sd(to_vector(y));  
+} 
+
+parameters {
+  real<lower=0, upper=1> phi;  // chance of success (pooled)
+// By default, Stan places a uniform prior over the values meeting the constraints on a parameter. Because phi is constrained to fall in [0,1], there is no need to explicitly specify the uniform prior on ϕ.
+}
+
+model {
+y ~ binomial(K, phi);  // a vectorized sampling statement 
+// equivalent to but more efficient than the following explicit loop: 
+//    for (n in 1:N)  
+//      y[n] ~ binomial(K[n], phi);
+}
+
+generated quantities { 
+  vector<lower=0, upper=1>[N] theta;  // chance-of-success 
+ 
+  real log_p_new;      // posterior predictive log density remaining trials 
+ 
+  int<lower=0> z[N];  // posterior prediction remaining trials 
+ 
+  int<lower=0, upper=1> some_ability_gt_350;  // Pr[some theta > 0.35] 
+  int<lower=0, upper=1> avg_gt_400[N];        // Pr[season avg of n] >= 0.400 
+  int<lower=0, upper=1> ability_gt_400[N];    // Pr[chance-of-success of n] >= 0.400 
+ 
+  int<lower=0> y_rep[N];      // replications for existing items 
+ 
+  real<lower=0> min_y_rep;   // posterior predictive min replicated successes 
+  real<lower=0> max_y_rep;   // posterior predictive max replicated successes 
+  real<lower=0> mean_y_rep;  // posterior predictive sample mean replicated successes 
+  real<lower=0> sd_y_rep;    // posterior predictive sample std dev replicated successes 
+ 
+  int<lower=0, upper=1> p_min;  // posterior predictive p-values 
+  int<lower=0, upper=1> p_max; 
+  int<lower=0, upper=1> p_mean; 
+  int<lower=0, upper=1> p_sd; 
+ 
+  theta = rep_vector(phi, N); 
+ 
+  log_p_new = 0; 
+  for (n in 1:N) 
+    log_p_new = log_p_new + binomial_lpmf(y_new[n] | K_new[n], theta[n]); 
+ 
+  for (n in 1:N) 
+    z[n] = binomial_rng(K_new[n], theta[n]); 
+ 
+  some_ability_gt_350 = (max(theta) > 0.35); 
+  for (n in 1:N) 
+    avg_gt_400[n] = (((y[n] + z[n]) / (0.0 + K[n] + K_new[n])) > 0.400); 
+  for (n in 1:N) 
+    ability_gt_400[n] = (theta[n] > 0.400); 
+ 
+  for (n in 1:N) 
+    y_rep[n] = binomial_rng(K[n], theta[n]); 
+ 
+  min_y_rep = min(y_rep); 
+  max_y_rep = max(y_rep); 
+  mean_y_rep = mean(to_vector(y_rep)); 
+  sd_y_rep = sd(to_vector(y_rep)); 
+ 
+  p_min = (min_y_rep >= min_y); 
+  p_max = (max_y_rep >= max_y); 
+  p_mean = (mean_y_rep >= mean_y); 
+  p_sd = (sd_y_rep >= sd_y); 
+}
+
+```
+
+# Fit the debug and full model of complete pooling
+```{r}
+
+M <- 10000
+
+# Run the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = completepool@model_code, data = pool_data, iter = 10, chains = 1)
+
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit1 <- stan(
+#  file = "schools.stan",  # Stan program
+#  model_code = completepool@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
+  data = pool_data,    # named list of data
+  fit = fit0_debug,   # to save compilation time if the debug model was run
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+  iter = (M/2), #2000,            # total number of iterations per chain
+#  warmup = 1000,          # number of warmup iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+})
+
+```
+
+# Summary of the posterior sample for phi
+```{r}
+
+ss_complete_pool <- extract(fit1);
+print(fit1, c("phi"), probs = c(0.1, 0.5, 0.9))
+
+# effective sample size is good 
+# (roughly half the number of posterior draws; 
+#  by default Stan uses as many iterations to warmup as it does for drawing the sample).
+
+```
+
+# No pooling: n parameters ϕ_n (theta) representing the chance of success for the n players
+  (because very unlikely that all players have the same chance of success)
+```{stan output.var=nopool, eval=T}
+
+// From a population model perspective, no pooling corresponds to *infinite* population variance.
+
+data {
+  int<lower=0> N;           // items
+  int<lower=0> K[N];        // initial trials
+  int<lower=0> y[N];        // initial successes
+
+  int<lower=0> K_new[N];    // new trials
+  int<lower=0> y_new[N];    // new successes 
+}
+
+// sampling distribution for each player’s number of hits y_n is modeled as
+//    p(y_n|ϕ) = Binomial(y_n|K_n,ϕ).
+//
+// For given ϕ, the joint likelihood of seeing a total of y_n successes from player n's K_n new trials for 
+//   all the N players, with y = y_1 + ... + y_N, is 
+//    p(y|ϕ) = ∏{N,n=1} Binomial(y_n|K_n,ϕ)
+
+transformed data { 
+  real min_y;   // minimum successes 
+  real max_y;   // maximum successes 
+  real mean_y;  // sample mean successes 
+  real sd_y;    // sample std dev successes 
+
+  min_y = min(y); 
+  max_y = max(y); 
+  mean_y = mean(to_vector(y)); 
+  sd_y = sd(to_vector(y));  
+} 
+
+parameters {
+//  real<lower=0, upper=1> phi;  // chance of success (pooled)
+  vector<lower=0, upper=1>[N] theta; // chance of success (no pooling)
+// By default, Stan places a uniform prior over the values meeting the constraints on a parameter. Because phi is constrained to fall in [0,1], there is no need to explicitly specify the uniform prior on ϕ.
+}
+
+model {
+y ~ binomial(K, theta);  // a vectorized sampling statement 
+// equivalent to but more efficient than the following explicit loop: 
+//    for (n in 1:N)  
+//      y[n] ~ binomial(K[n], theta[n]);
+}
+
+generated quantities { 
+//  vector<lower=0, upper=1>[N] theta;  // chance-of-success 
+ 
+  real log_p_new;      // posterior predictive log density remaining trials 
+ 
+  int<lower=0> z[N];  // posterior prediction remaining trials 
+ 
+  int<lower=0, upper=1> some_ability_gt_350;  // Pr[some theta > 0.35] 
+  int<lower=0, upper=1> avg_gt_400[N];        // Pr[season avg of n] >= 0.400 
+  int<lower=0, upper=1> ability_gt_400[N];    // Pr[chance-of-success of n] >= 0.400 
+ 
+/////////////////////////////////// 
+  int<lower=1, upper=N> rnk[N];      // rank of player n 
+  int<lower=0, upper=1> is_best[N];  // Pr[player n highest chance of success] 
+/////////////////////////////////// 
+
+  int<lower=0> y_rep[N];      // replications for existing items 
+ 
+  real<lower=0> min_y_rep;   // posterior predictive min replicated successes 
+  real<lower=0> max_y_rep;   // posterior predictive max replicated successes 
+  real<lower=0> mean_y_rep;  // posterior predictive sample mean replicated successes 
+  real<lower=0> sd_y_rep;    // posterior predictive sample std dev replicated successes 
+ 
+  int<lower=0, upper=1> p_min;  // posterior predictive p-value for min test stat 
+  int<lower=0, upper=1> p_max; 
+  int<lower=0, upper=1> p_mean; // posterior predictive p-value for sample mean test stat 
+  int<lower=0, upper=1> p_sd;   // posterior predictive p-value for sample sd test stat 
+ 
+//  theta = rep_vector(phi, N); 
+ 
+  log_p_new = 0; 
+  for (n in 1:N) 
+    log_p_new = log_p_new + binomial_lpmf(y_new[n] | K_new[n], theta[n]); 
+ 
+  for (n in 1:N) 
+    z[n] = binomial_rng(K_new[n], theta[n]); 
+ 
+  some_ability_gt_350 = (max(theta) > 0.35); 
+  for (n in 1:N) 
+    avg_gt_400[n] = (((y[n] + z[n]) / (0.0 + K[n] + K_new[n])) > 0.400); 
+  for (n in 1:N) 
+    ability_gt_400[n] = (theta[n] > 0.400); 
+ 
+//////////////////////////////////// 
+  { 
+    int dsc[N]; 
+    dsc = sort_indices_desc(theta); 
+    for (n in 1:N) 
+      rnk[dsc[n]] = n; 
+  } 
+  for (n in 1:N) 
+    is_best[n] = (rnk[n] == 1); 
+//////////////////////////////////// 
+ 
+  for (n in 1:N) 
+    y_rep[n] = binomial_rng(K[n], theta[n]); 
+ 
+  min_y_rep = min(y_rep); 
+  max_y_rep = max(y_rep); 
+  mean_y_rep = mean(to_vector(y_rep)); 
+  sd_y_rep = sd(to_vector(y_rep)); 
+ 
+  p_min = (min_y_rep >= min_y); 
+  p_max = (max_y_rep >= max_y); 
+  p_mean = (mean_y_rep >= mean_y); 
+  p_sd = (sd_y_rep >= sd_y); 
+}
+
+```
+
+# Fit the debug and full model of no pooling; Summary of results
+```{r}
+
+M <- 10000
+
+# Run the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = nopool@model_code, data = pool_data, iter = 10, chains = 1)
+
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit1 <- stan(
+#  file = "schools.stan",  # Stan program
+#  model_code = completepool@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
+  data = pool_data,    # named list of data
+  fit = fit0_debug,   # to save compilation time if the debug model was run
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+  iter = (M/2), #2000,            # total number of iterations per chain
+#  warmup = 1000,          # number of warmup iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+})
+
+ss_no_pool <- extract(fit1);
+print(fit1, c("theta"), probs = c(0.1, 0.5, 0.9))
+
+# effective sample size is good 
+# (roughly half the number of posterior draws; 
+#  by default Stan uses as many iterations to warmup as it does for drawing the sample).
+
+################################################ 
+# Note: 
+# The no pooling model model provides better MCMC mixing than the complete pooling model as indicated 
+#   by the effective sample size and convergence diagnostics R^; 
+# (Although not in and of itself meaningful, it is often the case that badly misspecified models
+#   -- here the *complete pooling* -- proves difficult computationally)
+
+```
+
+# Partial pooling: A hierarchical model treats the players as belonging to a population of players
+ (some amount of pooling between these two extremes is called for. *But how much?*)
+```{stan output.var=partialpool, eval=T}
+
+// Partial pooling is typically accomplished through hierarchical models. Hierarchical models directly model the population of items. The population mean and variance is important, but the two hierarchical models we consider (chance of success vs. log odds of success) provide rather differently shaped posteriors.
+
+data {
+  int<lower=0> N;           // items
+  int<lower=0> K[N];        // initial trials
+  int<lower=0> y[N];        // initial successes
+
+  int<lower=0> K_new[N];    // new trials
+  int<lower=0> y_new[N];    // new successes 
+}
+
+// sampling distribution for each player’s number of hits y_n is modeled as
+//    p(y_n|ϕ) = Binomial(y_n|K_n,ϕ).
+//
+// For given ϕ, the joint likelihood of seeing a total of y_n successes from player n's K_n new trials for 
+//   all the N players, with y = y_1 + ... + y_N, is 
+//    p(y|ϕ) = ∏{N,n=1} Binomial(y_n|K_n,ϕ)
+
+transformed data { 
+  real min_y;   // minimum successes 
+  real max_y;   // maximum successes 
+  real mean_y;  // sample mean successes 
+  real sd_y;    // sample std dev successes 
+
+  min_y = min(y); 
+  max_y = max(y); 
+  mean_y = mean(to_vector(y)); 
+  sd_y = sd(to_vector(y));  
+} 
+
+parameters {
+//  real<lower=0, upper=1> phi;  // chance of success (pooled)
+  real<lower=0, upper=1> phi;         // population chance of success 
+  real<lower=1> kappa;                // population concentration 
+  vector<lower=0, upper=1>[N] theta;  // chance of success 
+//  vector<lower=0, upper=1>[N] theta; // chance of success (no pooling)
+// By default, Stan places a uniform prior over the values meeting the constraints on a parameter. Because phi is constrained to fall in [0,1], there is no need to explicitly specify the uniform prior on ϕ.
+}
+
+model {
+// Assume p(θ_n|α,β) = Beta(θ_n|α,β). The beta distribution is the conjugate prior for the binomial
+// Interpretation: α−1 being the prior number of successes and β−1 being the prior number of failures, 
+//                 with α=β=1 corresponding to no prior observations and thus a uniform distribution
+// Note: Rather than parameterize α and β directly, put priors on ϕ∈[0,1] and κ>0, and 
+//        define α=κϕ and β=κ(1−ϕ); thus, ϕ=α/(α+β) is the mean of a variable distributed as Beta(α,β),
+//        with κ=α+β, the prior count plus two, roughly inversely related to the variance.
+  kappa ~ pareto(1, 1.5);                        // hyperprior 
+  theta ~ beta(phi * kappa, (1 - phi) * kappa);  // prior 
+  y ~ binomial(K, theta);  // a vectorized sampling statement 
+// equivalent to but more efficient than the following explicit loop: 
+//    for (n in 1:N)  
+//      y[n] ~ binomial(K[n], theta[n]);
+}
+
+generated quantities { 
+//  vector<lower=0, upper=1>[N] theta;  // chance-of-success 
+ 
+  real log_p_new;      // posterior predictive log density remaining trials 
+ 
+  int<lower=0> z[N];  // posterior prediction remaining trials 
+ 
+  int<lower=0, upper=1> some_ability_gt_350;  // Pr[some theta > 0.35] 
+  int<lower=0, upper=1> avg_gt_400[N];        // Pr[season avg of n] >= 0.400 
+  int<lower=0, upper=1> ability_gt_400[N];    // Pr[chance-of-success of n] >= 0.400 
+ 
+///////////////////////////////////
+  int<lower=1, upper=N> rnk[N];      // rank of player n 
+  int<lower=0, upper=1> is_best[N];  // Pr[player n highest chance of success] 
+///////////////////////////////////
+
+  int<lower=0> y_pop_rep[N];  // replications for simulated items 
+  int<lower=0> y_rep[N];      // replications for existing items 
+ 
+  real<lower=0> min_y_rep;   // posterior predictive min replicated successes 
+  real<lower=0> max_y_rep;   // posterior predictive max replicated successes 
+  real<lower=0> mean_y_rep;  // posterior predictive sample mean replicated successes 
+  real<lower=0> sd_y_rep;    // posterior predictive sample std dev replicated successes 
+ 
+  int<lower=0, upper=1> p_min;  // posterior predictive p-value for min test stat 
+  int<lower=0, upper=1> p_max; 
+  int<lower=0, upper=1> p_mean; // posterior predictive p-value for sample mean test stat 
+  int<lower=0, upper=1> p_sd;   // posterior predictive p-value for sample sd test stat 
+ 
+//  theta = rep_vector(phi, N); 
+ 
+  log_p_new = 0; 
+  for (n in 1:N) 
+    log_p_new = log_p_new + binomial_lpmf(y_new[n] | K_new[n], theta[n]); 
+ 
+  for (n in 1:N) 
+    z[n] = binomial_rng(K_new[n], theta[n]); 
+ 
+  some_ability_gt_350 = (max(theta) > 0.35); 
+  for (n in 1:N) 
+    avg_gt_400[n] = (((y[n] + z[n]) / (0.0 + K[n] + K_new[n])) > 0.400); 
+  for (n in 1:N) 
+    ability_gt_400[n] = (theta[n] > 0.400); 
+ 
+//////////////////////////////////// 
+  { 
+    int dsc[N]; 
+    dsc = sort_indices_desc(theta); 
+    for (n in 1:N) 
+      rnk[dsc[n]] = n; 
+  } 
+  for (n in 1:N) 
+    is_best[n] = (rnk[n] == 1); 
+//////////////////////////////////// 
+ 
+   for (n in 1:N) 
+    y_pop_rep[n] = binomial_rng(K[n],  
+                                 beta_rng(phi * kappa, 
+                                          (1 - phi) * kappa)); 
+  for (n in 1:N) 
+    y_rep[n] = binomial_rng(K[n], theta[n]); 
+ 
+  min_y_rep = min(y_rep); 
+  max_y_rep = max(y_rep); 
+  mean_y_rep = mean(to_vector(y_rep)); 
+  sd_y_rep = sd(to_vector(y_rep)); 
+ 
+  p_min = (min_y_rep >= min_y); 
+  p_max = (max_y_rep >= max_y); 
+  p_mean = (mean_y_rep >= mean_y); 
+  p_sd = (sd_y_rep >= sd_y); 
+}
+
+
+```
+
+# Fit the debug and full model of partial pooling; Summary of results
+```{r}
+
+M <- 10000
+
+# Run the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = partialpool@model_code, data = pool_data, iter = 10, chains = 1)
+
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit1 <- stan(
+#  file = "schools.stan",  # Stan program
+#  model_code = completepool@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
+  data = pool_data,    # named list of data
+  fit = fit0_debug,   # to save compilation time if the debug model was run
+  control = list(stepsize = 0.01, adapt_delta = 0.99),    # adjust when there're divergent transitions after warmup
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+  iter = (M/2), #2000,            # total number of iterations per chain
+#  warmup = 1000,          # number of warmup iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+})
+
+ss_partial_pool <- extract(fit1);
+print(fit1, c("theta", "kappa", "phi"), probs = c(0.1, 0.5, 0.9))
+
+# effective sample size is good 
+# (roughly half the number of posterior draws; 
+#  by default Stan uses as many iterations to warmup as it does for drawing the sample).
+
+############################################################################################
+# Note: The lower n_eff for kappa suggests that poorly constrained parameter leads to reduced computational efficiency.  #       Such poor mixing is typical of centered parameterizations in hierarchical models (Betancourt and Girolami 2015). #      Here, when κ is smaller, there is more latitude for θ1 to move around. This phenomenon is covered in the Stan
+#      manual (Stan Development Team 2015), and is analyzed for HMC by Betancourt and Girolami (2015). They discussed why
+#      the centered parameterization described in the previous section is challenging for MCMC methods to sample when   
+#      there are small counts per group (here, the players are the groups and each has only 45 at bats observed).
+# Solution: Try an alternative non-centered parameterization. 
+#           ϕ ∈ [0,1] is transformed to logit(ϕ)=log(ϕ/(1−ϕ)) and κ ∈ (0,∞) is transformed to log(κ).  
+
+```
+
+
+# Partial pooling (parametrized with log odds)
+  (Stan has a binomial probability function with a built-in logit link function)
+```{stan output.var=logoddspool, eval=T}
+
+// Partial pooling is typically accomplished through hierarchical models. Hierarchical models directly model the population of items. The population mean and variance is important, but the two hierarchical models we consider (chance of success vs. log odds of success) provide rather differently shaped posteriors.
+
+data {
+  int<lower=0> N;           // items
+  int<lower=0> K[N];        // initial trials
+  int<lower=0> y[N];        // initial successes
+
+  int<lower=0> K_new[N];    // new trials
+  int<lower=0> y_new[N];    // new successes 
+}
+
+transformed data { 
+  real min_y;   // minimum successes 
+  real max_y;   // maximum successes 
+  real mean_y;  // sample mean successes 
+  real sd_y;    // sample std dev successes 
+
+  min_y = min(y); 
+  max_y = max(y); 
+  mean_y = mean(to_vector(y)); 
+  sd_y = sd(to_vector(y));  
+} 
+
+// sampling distribution for each player’s number of hits y_n is modeled as
+//    p(y_n|K_n,α_n) = Binomial(y_n|K_n,, logit^(−1)(α_n)).
+//                   = BinomialLogit(y_n|K_n,, α_n).
+//
+// use a simple normal hierarchical prior, p(α_n|μ,σ) = Normal(α_n|μ,σ).
+// Then one level up, use a *weakly informative hyperprior* for μ, p(μ) = Normal(μ|−1,1)
+// The prior scale σ>0 can be taken to be a truncated normal (half normal, here): p(σ) = 2Normal(σ|0,1) ∝ Normal(σ|0,1)
+// 
+// casting the problem in terms of log odds makes it easier to add in fixed effects and other multilevel effects, or even
+// varying intercepts and slopes with multivariate priors (see Gelman and Hill (2007) for many examples translated to Stan).
+// Note: It is also important to consider non-centered parameterization. Thus, define the likelihood as
+//       p(y_n|αstd_n,μ,σ,K) = BinomialLogit(K_n, μ+σα_n). 
+// This decouples the sampling distribution for αstd from μ and σ, greatly reducing their correlation in the posterior.
+
+parameters {
+  real mu;                       // population mean of success log-odds
+  real<lower=0> sigma;           // population sd of success log-odds
+  vector[N] alpha_std;               // success log-odds
+}
+
+model {
+  mu ~ normal(-1, 1);               // hyperprior
+  sigma ~ normal(0, 1);             // hyperprior
+  alpha_std ~ normal(0, 1);                       // prior
+  y ~ binomial_logit(K, mu + sigma * alpha_std);  // likelihood
+}
+
+generated quantities { 
+  vector[N] theta;  // chance-of-success 
+ 
+  real log_p_new;      // posterior predictive log density remaining trials 
+ 
+  int<lower=0> z[N];  // posterior prediction remaining trials 
+ 
+  int<lower=0, upper=1> some_ability_gt_350;  // Pr[some theta > 0.35] 
+  int<lower=0, upper=1> avg_gt_400[N];        // Pr[season avg of n] >= 0.400 
+  int<lower=0, upper=1> ability_gt_400[N];    // Pr[chance-of-success of n] >= 0.400 
+ 
+///////////////////////////////////
+  int<lower=1, upper=N> rnk[N];      // rank of player n 
+  int<lower=0, upper=1> is_best[N];  // Pr[player n highest chance of success] 
+///////////////////////////////////
+
+  int<lower=0> y_pop_rep[N];  // replications for simulated items 
+  int<lower=0> y_rep[N];      // replications for existing items 
+ 
+  real<lower=0> min_y_rep;   // posterior predictive min replicated successes 
+  real<lower=0> max_y_rep;   // posterior predictive max replicated successes 
+  real<lower=0> mean_y_rep;  // posterior predictive sample mean replicated successes 
+  real<lower=0> sd_y_rep;    // posterior predictive sample std dev replicated successes 
+ 
+  int<lower=0, upper=1> p_min;  // posterior predictive p-value for min test stat 
+  int<lower=0, upper=1> p_max; 
+  int<lower=0, upper=1> p_mean; // posterior predictive p-value for sample mean test stat 
+  int<lower=0, upper=1> p_sd;   // posterior predictive p-value for sample sd test stat 
+ 
+//  theta = rep_vector(phi, N); 
+  for (n in 1:N)
+    theta[n] = inv_logit(mu + sigma * alpha_std[n]);
+    
+  log_p_new = 0; 
+  for (n in 1:N) 
+    log_p_new = log_p_new + binomial_lpmf(y_new[n] | K_new[n], theta[n]); 
+ 
+  for (n in 1:N) 
+    z[n] = binomial_rng(K_new[n], theta[n]); 
+ 
+  some_ability_gt_350 = (max(theta) > 0.35); 
+  for (n in 1:N) 
+    avg_gt_400[n] = (((y[n] + z[n]) / (0.0 + K[n] + K_new[n])) > 0.400); 
+  for (n in 1:N) 
+    ability_gt_400[n] = (theta[n] > 0.400); 
+ 
+//////////////////////////////////// 
+  { 
+    int dsc[N]; 
+    dsc = sort_indices_desc(theta); 
+    for (n in 1:N) 
+      rnk[dsc[n]] = n; 
+  } 
+  for (n in 1:N) 
+    is_best[n] = (rnk[n] == 1); 
+//////////////////////////////////// 
+ 
+   for (n in 1:N) 
+    y_pop_rep[n] = binomial_rng(K[n],  
+                                 inv_logit(normal_rng(mu, sigma))); 
+  for (n in 1:N) 
+    y_rep[n] = binomial_rng(K[n], theta[n]); 
+ 
+  min_y_rep = min(y_rep); 
+  max_y_rep = max(y_rep); 
+  mean_y_rep = mean(to_vector(y_rep)); 
+  sd_y_rep = sd(to_vector(y_rep)); 
+ 
+  p_min = (min_y_rep >= min_y); 
+  p_max = (max_y_rep >= max_y); 
+  p_mean = (mean_y_rep >= mean_y); 
+  p_sd = (sd_y_rep >= sd_y); 
+}
+
+```
+
+# Fit the debug and full model of partial pooling (parametrized with log odds); Summary of results
+```{r}
+
+M <- 10000
+
+# Run the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = logoddspool@model_code, data = pool_data, iter = 10, chains = 1)
+
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit1 <- stan(
+#  file = "schools.stan",  # Stan program
+#  model_code = completepool@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
+  data = pool_data,    # named list of data
+  fit = fit0_debug,   # to save compilation time if the debug model was run
+  control = list(stepsize = 0.01, adapt_delta = 0.99),    # adjust when there're divergent transitions after warmup
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+  iter = (M/2), #2000,            # total number of iterations per chain
+#  warmup = 1000,          # number of warmup iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+})
+
+ss_logodds_pool <- extract(fit1);
+print(fit1, c("alpha_std", "theta", "mu", "sigma"), probs = c(0.1, 0.5, 0.9), digits = 3) 
+
+```
+
+# Posterior Predictive Distribution: predictions of the fitted model for new data
+  (interested in the expectation of p(y_new|θ) conditioned on y)
+```{r}
+
+# With M draws θ(m) from the posterior p(θ|y), the posterior predicitve log density for new data y_new can be written down
+#  use forward simulation from the data sampling distribution p(y|θ) to generate replicated data y_rep according to the posterior predictive distribution
+# The log of the posterior mean is approximated by (1/M) of the following computed sum: 
+  # log_p_new = 0; 
+  # for (n in 1:N) 
+  #   log_p_new = log_p_new + binomial_lpmf(y_new[n] | K_new[n], theta[n]); 
+
+
+```
+
+
+
+
