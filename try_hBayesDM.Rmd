@@ -1,0 +1,70 @@
+---
+title: "hierarchical Bayesian analysis (HBA) using hBayesDM"
+output: html_notebook
+---
+
+```{r}
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(hBayesDM)
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+# Orthogonalized Go/Nogo Task: Model 1
+```{r}
+
+?gng_m1
+
+output1 = gng_m1("example", ncore=4)
+
+output1$allIndPars
+
+output1$fit
+
+plot(output1, type="trace", fontSize=11)
+
+plot(output1, type="trace", inc_warmup=T)   # traceplot of hyper parameters w/ warmup samples
+
+plot(output1)
+
+plotInd(output1, "ep")  
+
+```
+
+# Compare models (and groups)
+```{r}
+
+printFit(output1, output2, output3, output4)
+
+#    Model    LOOIC   
+# 1 gng_m1 1588.843 
+# 2 gng_m2 1571.129 
+# 3 gng_m3 1573.872 
+# 4 gng_m4 1543.335 
+
+# Note that the lower LOOIC is, the better its model-fit is. Thus, model#4 has the best LOOIC compared to other models. 
+
+```
+
+# Variational inference for approximate posterior sampling
+```{r}
+#takes very little time (especially with precompiled models) to do variational inference
+
+# fit example data with the gng_m3 model
+output = gng_m3(data="example", vb = TRUE)
+
+```
+
+
+```{r}
+
+```
