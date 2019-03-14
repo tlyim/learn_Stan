@@ -1,0 +1,129 @@
+---
+title: "Bayesian Revenue Estimation with Stan"
+output: html_notebook
+---
+
+https://www.smartly.io/blog/tutorial-how-we-productized-bayesian-revenue-estimation-with-stan
+
+```{r}
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+
+```{stan output.var=simpleRevEst, eval=T}
+// For a complete model, we’d need some reasonable priors for the location and scale parameters. If the priors are excluded, Stan automatically uses uninformative priors. 
+
+data {
+  int adsets;
+  int observations;
+  int observation_adset[observations];
+  vector[observations] observation_conversion_count; // n_i
+  vector[observations] observation_conversion_revenue; // r_i
+}
+
+parameters {
+  vector[adsets] adset_mu; // theta_a
+  vector[adsets] adset_sigma; // sigma_a
+}
+
+model {
+  vector[observations] observation_mu; // theta_i
+  vector[observations] observation_sigma; // sigma_i
+ 
+  observation_sigma = sqrt(log(1 + (
+      exp(square(adset_sigma[observation_adset])) - 1
+    ) ./ observation_conversion_count));
+  observation_mu = adset_mu[observation_adset] +
+    log(observation_conversion_count) + 0.5 * (
+      square(adset_sigma[observation_adset]) -
+      square(observation_sigma)
+    );
+ 
+  observation_conversion_revenue ~ lognormal(observation_mu, observation_sigma);
+}
+
+generated quantities {
+  vector[adsets] adset_mean;
+  adset_mean = exp(adset_mu + 0.5 * square(adset_sigma));
+}
+
+```
+
+```{stan output.var=hierRevEst, eval=T}
+// model the scale parameters with hierarchy by using for example additive Cauchy priors as explained in Tauman, Chapter 6. Modeling the time-series effect would be beneficial, for example, by using Bayesian structural time-series models. Also, instead of using normal multilevel priors, t-distribution is used quite commonly to allow more variation.
+
+
+data {
+  int<lower=0> adsets;
+  int<lower=0> campaigns;
+  int<lower=1> adset2campaign[adsets];
+  int<lower=0> observations;
+  int<lower=1> observation_adset[observations];
+  vector<lower=1>[observations] observation_conversion_count; // n_i
+  vector<lower=0>[observations] observation_conversion_revenue; // r_i
+}
+
+transformed data {
+  vector[observations] log_observation_conversion_count =
+  log(observation_conversion_count);
+  vector[observations] log_observation_conversion_revenue =
+  log(observation_conversion_revenue);
+}
+
+parameters {
+  real<lower=-5, upper=20> account_mu; // lambda
+  real<lower=0, upper=5> account_mu_sd; // phi
+  vector[campaigns] campaign_mu_z;
+  real<lower=0, upper=5> campaign_mu_sd; // tau
+  vector[adsets] adset_mu_z;
+  real<lower=0.001, upper=2.5> revenue_sigma; // sigma
+}
+
+transformed parameters {
+  vector[campaigns] campaign_mu; // mu_c
+  vector[adsets] adset_mu; // theta_a
+  campaign_mu = account_mu + account_mu_sd * campaign_mu_z;
+  adset_mu = campaign_mu[adset2campaign] + campaign_mu_sd * adset_mu_z;
+}
+
+model {
+  vector[observations] observation_mu; // theta_i
+  vector[observations] observation_sigma; // sigma_i
+  campaign_mu_z ~ normal(0, 1);
+  adset_mu_z ~ normal(0, 1);
+  account_mu_sd ~ exponential(1 / 0.05);
+  campaign_mu_sd ~ exponential(1 / 0.05);
+  revenue_sigma ~ inv_gamma(6, 4);
+  observation_sigma = sqrt(log(1 + (exp(square(revenue_sigma)) - 1) ./ observation_conversion_count));
+  observation_mu = adset_mu[observation_adset] + log_observation_conversion_count + 
+                    log_observation_conversion_revenue ~ normal(observation_mu, observation_sigma);
+}
+
+generated quantities {
+  vector[campaigns] campaign_mean;
+  vector[adsets] adset_mean;
+  campaign_mean = exp(campaign_mu + 0.5 * square(revenue_sigma));
+  adset_mean = exp(adset_mu + 0.5 * square(revenue_sigma));
+}
+
+```
+
+
+```{r}
+
+
+```
+
+

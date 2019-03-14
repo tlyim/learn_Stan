@@ -1,0 +1,79 @@
+---
+title: "Bernoulli bandits: sequential designs for A/B testing in Stan"
+output: html_notebook
+---
+
+https://statmodeling.stat.columbia.edu/2018/02/04/andrew-vs-multi-armed-bandit/
+https://en.wikipedia.org/wiki/Multi-armed_bandit
+
+```{r}
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+
+```{stan output.var=simpleRevEst, eval=T}
+
+data {
+  int K;                // num arms
+  int N;                // num trials
+  int z[N];  // arm on trial n
+  int y[N];  // reward on trial n
+}
+transformed data {
+  int successes[K] = rep_array(0, K);
+  int trials[K] = rep_array(0, K);
+  for (n in 1:N) {
+    trials[z[n]] += 1;
+    successes[z[n]] += y[n];
+  }
+}
+generated quantities {
+  simplex[K] is_best;
+  vector[K] theta;
+  for (k in 1:K)
+    theta[k] = beta_rng(1 + successes[k], 1 + trials[k] - successes[k]);
+  {
+    real best_prob = max(theta);
+    for (k in 1:K)
+      is_best[k] = (theta[k] >= best_prob);
+    is_best /= sum(is_best);  // uniform for ties
+  }
+}
+
+```
+
+```{r}
+
+model_conjugate <- stan_model("bernoulli-bandits-conjugate.stan")
+fit_bernoulli_bandit <- function(y, z, K) {
+  data <- list(K = K, N = length(y), y = y, z = z)
+  sampling(model_conjugate, algorithm = "Fixed_param", data = data, 
+           warmup = 0, chains = 1, iter = 1000, refresh = 0)
+}
+
+expectation <- function(fit, param) {
+  posterior_summary <- summary(fit, pars = param, probs = c())
+  posterior_summary$summary[ , "mean"]
+}
+
+thompson_sampling_policy <- function(y, z, K) {
+  posterior <- fit_bernoulli_bandit(y, z, K)
+  p_best <- expectation(posterior, "is_best")
+  sample(K, 1, replace = TRUE, p_best)
+}
+
+```
+
+
