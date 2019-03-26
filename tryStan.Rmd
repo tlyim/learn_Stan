@@ -1,0 +1,181 @@
+---
+title: "try Stan - following JSS articles"
+output: html_notebook
+---
+
+
+```{r}
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+```{stan output.var=simpleExample, eval=T}
+
+data {
+int<lower=0> N; // number of trials
+int<lower=0, upper=1> y[N]; // success on trial n
+}
+parameters {
+real<lower=0, upper=1> theta; // chance of success
+}
+model {
+theta ~ uniform(0, 1); // prior
+for (n in 1:N)
+y[n] ~ bernoulli(theta); // likelihood
+}
+
+
+```
+
+Simulate simple data and estimate with OLS
+(the simplicity gives quite accurate estimates)
+```{r}
+
+N = 99  #9999
+
+set.seed(555)  # set the seed for random generation to ensure replicability
+# X1 <- rep(1, N)
+# X2 <- rnorm(N) # simulate explanatory variable data based on randomly generated numbers following the normal dist
+# X3 <- rnorm(N) 
+X <- matrix(data = c(rep(1, N), rnorm(N), rnorm(N)), nrow = N)
+
+#set actual parameters of the data generation process (DGP)
+#a = c(0.4, 0.1, -0.2)
+avec <- matrix(data = c(0.4, 0.1, -0.2), nrow = 3)  # define column vector
+
+# Simulate the logodds based on a linear model 
+# (Later, this true logit model will be estimated with observed data)
+#logodds <- a[1]*x1 + a[2]*x2 + a[3]*x3  
+sigma = 0.15
+e <- rnorm(N, sd = sigma)
+y <- (X %*% avec + e) %>% as.vector()  # Note: must use the parentheses before %>%; o/w, won't work
+# turn the output into a vector, rather than a matrix[N,1]
+
+mod_OLS <- lm(y ~ . + 0, data = data.frame(y, X))  # + 0 to remove intercept as X1 is the unit vector for intercept
+summary(mod_OLS)
+
+```
+
+Estimate the simulated model with Stan (forecasts specified in generated quantities block)
+```{stan output.var=lmExample, eval=T}
+
+data {
+  int<lower=0> N; // number of observations
+  int<lower=0> K; // number of coefficents (/predictors)
+  vector[N] y; // dependent variable
+  matrix[N,K] X; // predictor variables
+  int<lower=0> N_new; // number of predictions
+  matrix[N_new,K] X_new; //  
+}
+transformed data {
+// X1 = 1
+}
+parameters {
+  vector[K] b; // coefficients of the predictor variables
+  real<lower=0> sigma; // sd of error term
+}
+model {
+  y ~ normal(X*b, sigma);
+}
+generated quantities {
+  vector[N_new] y_new;
+  for (n in 1:N_new)
+    y_new[n] = normal_rng(X_new[n] * b, sigma);
+}
+
+```
+
+Estimate the simulated model with Stan (forecasts specified in parameters+model blocks)
+```{stan output.var=lmExample, eval=T}
+
+data {
+  int<lower=0> N; // number of observations
+  int<lower=0> K; // number of coefficents (/predictors)
+  vector[N] y; // dependent variable
+  matrix[N,K] X; // predictor variables
+  int<lower=0> N_new; // number of predictions
+  matrix[N_new,K] X_new; //  
+}
+transformed data {
+// X1 = 1
+}
+parameters {
+  vector[K] b; // coefficients of the predictor variables
+  real<lower=0> sigma; // sd of error term
+  vector[N_new] y_new;
+}
+model {
+  y ~ normal(X*b, sigma);
+  y_new ~ normal(X_new * b, sigma);
+}
+generated quantities {
+//  vector[N_new] y_new;
+//  for (n in 1:N_new)
+//    y_new[n] = normal_rng(X_new[n] * b, sigma);
+}
+
+```
+
+# Fit the debug and full model of complete pooling
+```{r}
+
+N_new = 5
+sim_data <- list(N = N, 
+                 K = 3,
+                 y = y, 
+                 X = X,
+                 X_new = X[1:N_new,],
+                 N_new = N_new
+                 )
+
+# Run the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = lmExample@model_code, data = sim_data, iter = 10, chains = 1)
+
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit1 <- stan(
+#  file = "schools.stan",  # Stan program
+#  model_code = completepool@model_code,  # either the @model_code of the model definition 
+                                    # or the name of a string object containing the model description
+  data = sim_data,    # named list of data
+  fit = fit0_debug,   # to save compilation time if the debug model was run
+#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+#  chains = 1,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 123,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+  iter = 2000,            # total number of iterations per chain
+#  warmup = 1000,          # number of warmup iterations per chain
+  refresh = 1000          # = 0 means no progress shown
+  )
+})
+
+```
+
+# Summary of the posterior sample for phi
+```{r}
+
+ss_complete_pool <- extract(fit1);
+#print(fit1, c("phi"), probs = c(0.1, 0.5, 0.9))
+print(fit1, probs = c(0.1, 0.5, 0.9))
+
+# effective sample size is good 
+# (roughly half the number of posterior draws; 
+#  by default Stan uses as many iterations to warmup as it does for drawing the sample).
+
+```
+
+
+

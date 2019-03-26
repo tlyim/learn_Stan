@@ -1,0 +1,372 @@
+---
+title: "Examples - logit, probit, and linearHypothesis"
+output: html_notebook
+---
+
+Load required packages
+```{r}
+library(aod)
+library(lmtest)
+library(car)
+library(magrittr)
+```
+
+Simulate simple data and estimate both a logit and a probit model
+(the simplicity gives quite accurate estimates; probit fits better than logit)
+```{r}
+
+N = 9999
+
+set.seed(555)  # set the seed for random generation to ensure replicability
+x1 <- rnorm(N) # simulate explanatory variable data based on randomly generated numbers following the normal dist
+x2 <- rnorm(N) 
+
+# Simulate the logodds based on a linear model 
+# (Later, this true logit model will be estimated with observed data)
+logodds <- 0.4 + 0.1*x1 + (-0.2)*x2  
+
+# By definition, logodds = log(prob/(1 - prob)); thus, exp(logodds) = prob/(1 - prob)
+# (Recall that the exponential function, exp, is the inverse function of the logarithmic function, log)
+# (Inverse function of a function will returns the original value: exp(log(x)) = x)
+prob <- exp(logodds)/(exp(logodds) + 1)
+summary(prob)
+
+# Define the observed binary-valued y data based on prob
+y <- rbinom(N, size = 1, prob = prob) # assumed to follow binomial dist of size = 1
+summary(y)
+
+# Define the data frame for use in regression 
+df <- data.frame(y = y, x1 = x1, x2 = x2) 
+
+# Estimate the logit model based on 0-1 obs.  
+mod_logit <- glm(y ~ x1 + x2, data = df, family = binomial(link = "logit")) 
+summary(mod_logit)
+# AIC: 13379
+# AIC is a measure of goodness of fit playing the same role as adj. R2;
+# however, the smaller the AIC the better the fit
+# see more: https://www.statisticshowto.datasciencecentral.com/akaikes-information-criterion/
+# For discussion of results in terms of logodds, see eg pp. 5-6 of this slide deck:
+#   https://www.princeton.edu/~otorres/LogitR101.pdf 
+# For discussion of results in terms of marginal effect, see p. 14 of the slide deck
+
+
+##################################
+# Swtich to use the probit model
+set.seed(555)  # set the seed for random generation to ensure replicability
+# Below uses the cumulative density function of normal distribution as the binomial probability
+prob <- pnorm(0.4 + 0.1*x1 + (-0.2)*x2)
+summary(prob)
+
+# Define the observed indicator variable based on prob_y
+# Below maps each prob_y to 0 or 1 based on binomial distribution
+# lapply() is a list operation to roll over each element in a list to apply a function
+y <- lapply(prob, function(p) rbinom(1, size = 1, prob = p)) %>% unlist()
+summary(y)
+
+# Define the data frame for use in regression 
+df <- data.frame(y = y, x1 = x1, x2 = x2) 
+
+# Estimate the probit model based on 0-1 obs.  
+mod_probit <- glm(y ~ x1 + x2, data = df, family = binomial(link = "probit")) 
+summary(mod_probit)
+# AIC: 12497 (as opposed to AIC: 13379 for the logit model)
+
+```
+
+Use aod::wald.test() to do a Wald Chi-squared test for linear hypothesis testing
+(Below is based on the discussion of the wald.test() in the 'Using the Probit Model' section at https://stats.idre.ucla.edu/r/dae/probit-regression/)
+```{r}
+
+# 2:3 below means the second to the third coefficient of the glm() model
+# see details of wald.test() at https://rdrr.io/cran/aod/man/wald.test.html
+aod::wald.test(b = coef(mod_probit), Sigma = vcov(mod_probit), Terms = 2:3)
+# Note: P(> X2) = 0.0 means the p-value of the joint test of the coefficients of x1 and x2 being different from zero is 0.0, ie, stronger than the 1% significance level 
+# Note: The [capital letter] X2 in the reported test result stands for the Chi-Squared, not the x2 in the glm() model
+
+# A more complicated but more explicit way to do the test above (ie, whether the hypothesis that both coefficient of x1 = 0 and coefficient of x2 = 0 hold jointly can be rejected) is as follows:
+jt_hypo <- rbind(cbind(0, 1, 0), cbind(0, 0, 1))
+aod::wald.test(b = coef(mod_probit), Sigma = vcov(mod_probit), L = jt_hypo)
+
+
+# The estimates, ie, coefficient of x1 = 0.10317 and coefficient of x2 = -0.20546, seem to be very precisely capture the underlying true values of 0.1 and -0.2, respectively. 
+# Below tests whether the linear hypothesis '2*coefficient of x1 + 1*coefficient of x2 = 0' can be rejeceted
+lin_hypo <- cbind(0, 2, 1)
+aod::wald.test(b = coef(mod_probit), Sigma = vcov(mod_probit), L = lin_hypo)
+# Note: The reported test result with P(> X2) = 0.98 means that the linear hypothesis above cannot be rejected, which is consistent with our expectation
+
+```
+
+Simulate data and model with some complication 
+(the complex curvature of the model leads to hard-to-estimate coefficients even with many obs)
+```{r}
+
+N = 29999
+
+set.seed(555)  # set the seed for random generation to ensure replicability
+REL <- rbinom(N, size = 1, prob = 0.5)  # simulate with Binomial distribution
+LOW_RISK <- rbinom(N, size = 1, prob = 0.6846) 
+AGE <- rpois(N, 37.33)   # simulate with Poisson distribution (taking only nonnegative whole numbers)
+LOG_SIZE <- rnorm(N, mean = 6.764, sd = 0.88)   # simulate with Normal distribution
+# Note: EntityType is used only in the code chunk concerning tests based on the cluster-adjusted vcox matrix
+EntityType <- c(rep("AR", floor(N/5)), 
+                rep("ED", floor(N/5)), 
+                rep("HE", floor(N/5)), 
+                rep("HU", floor(N/5)), 
+                rep("OT", N - 4*floor(N/5))) %>% 
+              sample() %>%  
+              as.factor()
+
+# Simulate a true model like your model for the matched sample
+#   (this will be estimated with the observed binary-valued ICD_ANY data)
+# Below is a simplified version of your model used here for illustration only
+logodds_ICD_ANY <- (19.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-20)*LOW_RISK  
+# Note: Assumed an intercept of 19.04 in the simulated model, instead of 199.04 because this becomes 
+#       too large to ever be estimated precisely. 
+
+
+# By definition, logodds = log(prob/(1 - prob)); thus, exp(logodds) = prob/(1 - prob)
+# (Recall that the exponential function, exp, is the inverse function of the logarithmic function, log)
+# (Inverse function of a function will returns the original value: exp(log(x)) = x)
+prob_ICD_ANY <- exp(logodds_ICD_ANY)/(exp(logodds_ICD_ANY) + 1)
+summary(prob_ICD_ANY)
+
+# Define the observed indicator variable based on prob_ICD_ANY
+ICD_ANY <- rbinom(N, size = 1, prob = prob_ICD_ANY)
+summary(ICD_ANY)
+
+# Define the data frame for use in regression 
+df <- data.frame( ICD_ANY = ICD_ANY,
+                  REL = REL, 
+                  LOG_SIZE = LOG_SIZE,
+                  REL_x_LOG_SIZE = REL*LOG_SIZE,
+                  AGE = AGE,
+                  REL_x_AGE = REL*AGE,
+                  LOW_RISK = LOW_RISK,
+                  EntityType = EntityType
+                  )
+
+# shorthand formula for both interaction and main effects using * leads to longer compute time
+mod <- glm(ICD_ANY ~ REL*LOG_SIZE + REL*AGE + LOW_RISK, data = df, family = binomial)
+summary(mod)
+
+logit_mod <- glm(ICD_ANY ~ REL + LOG_SIZE + AGE + REL_x_LOG_SIZE + REL_x_AGE + LOW_RISK, data = df, family = binomial(link = "logit")) 
+summary(logit_mod)
+# AIC: 27855
+
+# The true simulated model copied below for reference to contrast with the estimated model
+#
+#logodds_ICD_ANY <- (19.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+#                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-20)*LOW_RISK  
+#
+
+```
+
+Use aod::wald.test() to do a Wald Chi-squared test for a linear hypothesis
+```{r}
+# Note: Below are the [assumed] median values of the corresponding variable in 
+#       the simulated [matched] sample.
+# median(LOG_SIZE) = 6.578
+# median(AGE) = 33
+
+# For example, suppose that you want to know whether REL = 1 (as opposed to = 0) has a significant
+#   effect on the logodds_ICD_ANY when LOG_SIZE and AGE are at their sample median values above.
+# Then you want to test whether the following can be rejected when REL = 1, LOG_SIZE = 6.578, AGE = 33:
+#       b1*REL + b4*REL*LOG_SIZE + b5*REL*AGE = 0
+#   given the estimated model:
+#     logodds_ICD_ANY = b0 + b1*REL + b2*LOG_SIZE + b3*AGE + b4*REL*LOG_SIZE + b5*REL*AGE + b6*LOW_RISK  
+# In other words,
+#               b1*(1) + b4*(1)*(6.578) + b5*(1)*(33) = 0 
+#    or simply, b1 + (6.578)*b4 + 33*b5 = 0 
+lin_hypo <- cbind(0, 1, 0, 0, 6.578, 33, 0)
+  aod::wald.test(b = coef(logit_mod), Sigma = vcov(logit_mod), L = lin_hypo)
+
+# Another example, test whether the hypothesis that all b1=0, b4=0, b5=0 hold jointly can be rejected: 
+jt_hypo <- rbind(cbind(0, 1, 0, 0, 0, 0, 0), cbind(0, 0, 0, 0, 1, 0, 0), cbind(0, 0, 0, 0, 0, 1, 0))
+  aod::wald.test(b = coef(logit_mod), Sigma = vcov(logit_mod), L = jt_hypo)
+
+# To double check, test the following individual coefficient's statistical significance:
+hypo1 <- cbind(0, 1, 0, 0, 0, 0, 0)
+  aod::wald.test(b = coef(logit_mod), Sigma = vcov(logit_mod), L = hypo1)
+hypo4 <- cbind(0, 0, 0, 0, 1, 0, 0)
+  aod::wald.test(b = coef(logit_mod), Sigma = vcov(logit_mod), L = hypo4)
+hypo5 <- cbind(0, 0, 0, 0, 0, 1, 0)
+  aod::wald.test(b = coef(logit_mod), Sigma = vcov(logit_mod), L = hypo5)
+  
+```
+
+
+Switch to use a probit model 
+```{r}
+set.seed(555)  # set the seed for random generation to ensure replicability
+# Below uses the cumulative density function of normal distribution as the binomial probability
+prob_ICD_ANY <- pnorm((19.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-20)*LOW_RISK)
+summary(prob_ICD_ANY)
+
+# Define the observed indicator variable based on prob_ICD_ANY
+# Below maps each prob_y to 0 or 1 based on binomial distribution
+# lapply() is a list operation to roll over each element in a list to apply a function
+ICD_ANY <- lapply(prob_ICD_ANY, function(p) rbinom(1, size = 1, prob = p)) %>% unlist()
+summary(ICD_ANY)
+
+# Define the data frame for use in regression 
+df <- data.frame( ICD_ANY = ICD_ANY,
+                  REL = REL, 
+                  LOG_SIZE = LOG_SIZE,
+                  REL_x_LOG_SIZE = REL*LOG_SIZE,
+                  AGE = AGE,
+                  REL_x_AGE = REL*AGE,
+                  LOW_RISK = LOW_RISK,
+                  EntityType = EntityType
+                  )
+
+probit_mod <- glm(ICD_ANY ~ REL + LOG_SIZE + AGE + REL_x_LOG_SIZE + REL_x_AGE + LOW_RISK, data = df, family = binomial(link = "probit")) 
+summary(probit_mod)
+# AIC: 26951 (as opposed to AIC: 27855 for the logit model)
+
+# The true simulated model copied below for reference to contrast with the estimated model
+#
+#logodds_ICD_ANY <- (19.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+#                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-20)*LOW_RISK  
+#
+
+```
+
+Test hypotheses using estimates from the probit model 
+```{r}
+
+# test whether b1 + (6.578)*b4 + 33*b5 = 0 can be rejected
+lin_hypo <- cbind(0, 1, 0, 0, 6.578, 33, 0)
+  aod::wald.test(b = coef(probit_mod), Sigma = vcov(probit_mod), L = lin_hypo)
+
+# Another example, test whether the hypothesis that all b1=0, b4=0, b5=0 hold jointly can be rejected: 
+jt_hypo <- rbind(cbind(0, 1, 0, 0, 0, 0, 0), cbind(0, 0, 0, 0, 1, 0, 0), cbind(0, 0, 0, 0, 0, 1, 0))
+  aod::wald.test(b = coef(probit_mod), Sigma = vcov(probit_mod), L = jt_hypo)
+
+# To double check, test the following individual coefficient's statistical significance:
+hypo1 <- cbind(0, 1, 0, 0, 0, 0, 0)
+  aod::wald.test(b = coef(probit_mod), Sigma = vcov(probit_mod), L = hypo1)
+hypo4 <- cbind(0, 0, 0, 0, 1, 0, 0)
+  aod::wald.test(b = coef(probit_mod), Sigma = vcov(probit_mod), L = hypo4)
+hypo5 <- cbind(0, 0, 0, 0, 0, 1, 0)
+  aod::wald.test(b = coef(probit_mod), Sigma = vcov(probit_mod), L = hypo5)
+
+```
+
+
+Do the tests using car::linearHypothesis()
+(Note: The use of cluster-adj. vcov for testing is to account for correlation among obs. of the same EntityType.)
+(Note: However, the constrast between the tests based on cluster-adj. and unadj. vcov matrices is not  
+       dramatically different here because in the simulated model, the clustering of EntityType is 
+       randomly assigned. In general, this is unlikely.)
+```{r}
+
+# Get the robust s.e. and show the table for the t-test results on only the variables in columns 2 to 7 (column 1 is the intercept). 
+lmtest::coeftest(probit_mod, vcov = sandwich::vcovCL(probit_mod, cluster = df$EntityType))[2:7, ] 
+cat("           ---------------------------------------------------------\n\n")
+# compared to the test using non-cluster-adj. vcov
+lmtest::coeftest(probit_mod, vcov = aod::vcov(probit_mod))[2:7, ] 
+cat("====================================================================\n\n")
+
+#Contrast the vcov matrices extracted by the aod:: and sandwich:: packages
+sandwich::vcovCL(probit_mod, cluster = df$EntityType)
+cat("           ---------------------------------------------------------\n\n")
+aod::vcov(probit_mod)
+cat("====================================================================\n\n")
+
+# test whether b1 + (6.578)*b4 + 33*b5 = 0 can be rejected
+car::linearHypothesis(probit_mod, c("REL + 6.578*REL_x_LOG_SIZE + 33*REL_x_AGE = 0"), 
+                      vcov = sandwich::vcovCL(probit_mod, cluster = df$EntityType), 
+                      test = "Chisq")
+cat("           ---------------------------------------------------------\n\n")
+# compared to the test using non-cluster-adj. vcov
+car::linearHypothesis(probit_mod, c("REL + 6.578*REL_x_LOG_SIZE + 33*REL_x_AGE = 0"), 
+                      vcov = aod::vcov(probit_mod), 
+                      test = "Chisq")
+cat("====================================================================\n\n")
+
+# test whether the hypothesis that all b1=0, b4=0, b5=0 hold jointly can be rejected: 
+car::linearHypothesis(probit_mod, c("REL = 0", "REL_x_LOG_SIZE = 0", "REL_x_AGE = 0"), 
+                      vcov = sandwich::vcovCL(probit_mod, cluster = df$EntityType), 
+                      test = "Chisq")
+cat("           ---------------------------------------------------------\n\n")
+# compared to the test using non-cluster-adj. vcov
+car::linearHypothesis(probit_mod, c("REL = 0", "REL_x_LOG_SIZE = 0", "REL_x_AGE = 0"),  
+                      vcov = aod::vcov(probit_mod), 
+                      test = "Chisq")
+cat("====================================================================\n\n")
+
+```
+
+Try large intercept 
+(probit estimates seem to be less sensitive to the true model's large intercept than logit estimates)
+```{r}
+
+set.seed(555)  # set the seed for random generation to ensure replicability
+# Below uses the cumulative density function of normal distribution as the binomial probability
+prob_ICD_ANY <- pnorm((199.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-200)*LOW_RISK)
+summary(prob_ICD_ANY)
+
+# Define the observed indicator variable based on prob_ICD_ANY
+# Below maps each prob_y to 0 or 1 based on binomial distribution
+# lapply() is a list operation to roll over each element in a list to apply a function
+ICD_ANY <- lapply(prob_ICD_ANY, function(p) rbinom(1, size = 1, prob = p)) %>% unlist()
+summary(ICD_ANY)
+
+# Define the data frame for use in regression 
+df <- data.frame( ICD_ANY = ICD_ANY,
+                  REL = REL, 
+                  LOG_SIZE = LOG_SIZE,
+                  REL_x_LOG_SIZE = REL*LOG_SIZE,
+                  AGE = AGE,
+                  REL_x_AGE = REL*AGE,
+                  LOW_RISK = LOW_RISK,
+                  EntityType = EntityType
+                  )
+
+probit_mod <- glm(ICD_ANY ~ REL + LOG_SIZE + AGE + REL_x_LOG_SIZE + REL_x_AGE + LOW_RISK, data = df, family = binomial(link = "probit")) 
+summary(probit_mod)
+
+#############################
+set.seed(555)  # set the seed for random generation to ensure replicability
+# Switch to logit model
+logodds_ICD_ANY <- (199.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-200)*LOW_RISK  
+# Note: Assumed an intercept of 19.04 in the simulated model, instead of 199.04 because this becomes 
+#       too large to ever be estimated precisely. 
+
+
+# By definition, logodds = log(prob/(1 - prob)); thus, exp(logodds) = prob/(1 - prob)
+# (Recall that the exponential function, exp, is the inverse function of the logarithmic function, log)
+# (Inverse function of a function will returns the original value: exp(log(x)) = x)
+prob_ICD_ANY <- exp(logodds_ICD_ANY)/(exp(logodds_ICD_ANY) + 1)
+summary(prob_ICD_ANY)
+
+# Define the observed indicator variable based on prob_ICD_ANY
+ICD_ANY <- rbinom(N, size = 1, prob = prob_ICD_ANY)
+summary(ICD_ANY)
+
+# Define the data frame for use in regression 
+df <- data.frame( ICD_ANY = ICD_ANY,
+                  REL = REL, 
+                  LOG_SIZE = LOG_SIZE,
+                  REL_x_LOG_SIZE = REL*LOG_SIZE,
+                  AGE = AGE,
+                  REL_x_AGE = REL*AGE,
+                  LOW_RISK = LOW_RISK,
+                  EntityType = EntityType
+                  )
+
+logit_mod <- glm(ICD_ANY ~ REL + LOG_SIZE + AGE + REL_x_LOG_SIZE + REL_x_AGE + LOW_RISK, data = df, family = binomial(link = "logit")) 
+summary(logit_mod)
+  
+# The true simulated model copied below for reference to contrast with the estimated model
+#
+#logodds_ICD_ANY <- (19.04) + (-0.153)*REL + (0.065)*LOG_SIZE + (0.004)*AGE + 
+#                  (0.058)*REL*LOG_SIZE + (-0.004)*REL*AGE + (-20)*LOW_RISK  
+#
+```
+
+
