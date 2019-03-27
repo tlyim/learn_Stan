@@ -20,24 +20,6 @@ options(mc.cores = parallel::detectCores())  #
 
 ```
 
-```{stan output.var=simpleExample, eval=T}
-
-data {
-int<lower=0> N; // number of trials
-int<lower=0, upper=1> y[N]; // success on trial n
-}
-parameters {
-real<lower=0, upper=1> theta; // chance of success
-}
-model {
-theta ~ uniform(0, 1); // prior
-for (n in 1:N)
-y[n] ~ bernoulli(theta); // likelihood
-}
-
-
-```
-
 Simulate simple data and estimate with OLS
 (the simplicity gives quite accurate estimates)
 ```{r}
@@ -65,16 +47,21 @@ y <- (X %*% avec + e) %>% as.vector()  # Note: must use the parentheses before %
 mod_OLS <- lm(y ~ . + 0, data = data.frame(y, X))  # + 0 to remove intercept as X1 is the unit vector for intercept
 summary(mod_OLS)
 
+integrity = 0.8
+M <- rbinom(N, 1, integrity)
+
 ```
 
 Estimate the simulated model with Stan (forecasts specified in generated quantities block)
 ```{stan output.var=lmExample, eval=T}
 
 data {
-  int<lower=0> N; // number of observations
+  int<lower=0> N; // number of observations (for different CEOs/firms)
   int<lower=0> K; // number of coefficents (/predictors)
   vector[N] y; // dependent variable
   matrix[N,K] X; // predictor variables
+  int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
+  
   int<lower=0> N_new; // number of predictions
   matrix[N_new,K] X_new; //  
 }
@@ -84,9 +71,44 @@ transformed data {
 parameters {
   vector[K] b; // coefficients of the predictor variables
   real<lower=0> sigma; // sd of error term
+  real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
+//  vector[N] integrity;     // integrity level of each CEO affecting the decision to misreport or not
+}
+transformed parameters {
+  ilogodds = logit(integrity)
 }
 model {
+// b ~ cauchy(0, 2.5); // common prior for each b[K]
   y ~ normal(X*b, sigma);
+  M ~ bernoulli_logit(ilogodds); // likelihood
+  
+/*
+   CEO's choice of misreporting (explore) vs. truth-telling (exploit) is modelled as discrete choice
+     use bernoulli_logit() ?
+   The stochastic process (GP? with -ve due to accrual reversal constraint?) of maximally feasible extent of misreporting
+     is exogenous to the CEO but the realized value of this in a period affects the achievable reward of misreporting
+     GP mean depends on (slowly changing) time-varying firm-specific, industry-specific, and macroeconomic factors ?
+   Assume for simplicity that conditional on the decision to misreport, it is always optimal to choose the max extent
+     Determinants of explore-exploit include 
+       parameters: CEO-specific Integrity, 
+       variables: firm-specific ERC, allowable misreporting limit
+   Misreported CEO also learns directly the updated ERC for his firm, the incremental effect of misreporting, and
+     *most importantly* the likelihood of being caught through the following period (because he knows there's misreporting). 
+     Truth-telling would be harder to learn the likelihood of being caught because observing no restatement by other firms
+       cannot clearly tell whether there was no misreporting or misreporting remains not caught. 
+     Investors are smart enough to condition their ERC response according to the firm characteristics, etc
+       For example, in bad economic times, the reward from misreporting becomes relatively higher. 
+    Background noise (ie, likelihood or errors as opposed to irregularities) affects the incentive to misreport   
+   To begin, assume CEO works for only one firm for his whole life. 
+   Keep in mind that the unrestated earnings is a mix of misreported and truth-told earnings
+      Also, assume
+      - an exogenous fraction of all misreporting will be discovered in the next period 
+          (regardless of the misreporting extent in an instance)
+      - the fraction follows a stohastic process (again, with the mean slowly changing over time)
+   Thus, the count of restatement each period, adjusted by a multiple, is an estimate of accumulated misreporting
+     instances in the past     
+*/
+  
 }
 generated quantities {
   vector[N_new] y_new;
@@ -96,36 +118,6 @@ generated quantities {
 
 ```
 
-Estimate the simulated model with Stan (forecasts specified in parameters+model blocks)
-```{stan output.var=lmExample, eval=T}
-
-data {
-  int<lower=0> N; // number of observations
-  int<lower=0> K; // number of coefficents (/predictors)
-  vector[N] y; // dependent variable
-  matrix[N,K] X; // predictor variables
-  int<lower=0> N_new; // number of predictions
-  matrix[N_new,K] X_new; //  
-}
-transformed data {
-// X1 = 1
-}
-parameters {
-  vector[K] b; // coefficients of the predictor variables
-  real<lower=0> sigma; // sd of error term
-  vector[N_new] y_new;
-}
-model {
-  y ~ normal(X*b, sigma);
-  y_new ~ normal(X_new * b, sigma);
-}
-generated quantities {
-//  vector[N_new] y_new;
-//  for (n in 1:N_new)
-//    y_new[n] = normal_rng(X_new[n] * b, sigma);
-}
-
-```
 
 # Fit the debug and full model of complete pooling
 ```{r}
@@ -135,6 +127,7 @@ sim_data <- list(N = N,
                  K = 3,
                  y = y, 
                  X = X,
+                 M = M,
                  X_new = X[1:N_new,],
                  N_new = N_new
                  )
@@ -177,5 +170,53 @@ print(fit1, probs = c(0.1, 0.5, 0.9))
 
 ```
 
+Estimate the simulated model with Stan (forecasts specified in parameters+model blocks)
+```{stan output.var=lmExample, eval=T}
+
+data {
+  int<lower=0> N; // number of observations
+  int<lower=0> K; // number of coefficents (/predictors)
+  vector[N] y; // dependent variable
+  matrix[N,K] X; // predictor variables
+  int<lower=0> N_new; // number of predictions
+  matrix[N_new,K] X_new; //  
+}
+transformed data {
+// X1 = 1
+}
+parameters {
+  vector[K] b; // coefficients of the predictor variables
+  real<lower=0> sigma; // sd of error term
+  vector[N_new] y_new;
+}
+model {
+  y ~ normal(X*b, sigma);
+  y_new ~ normal(X_new * b, sigma);
+}
+generated quantities {
+//  vector[N_new] y_new;
+//  for (n in 1:N_new)
+//    y_new[n] = normal_rng(X_new[n] * b, sigma);
+}
+
+```
+
+```{stan output.var=simpleExample, eval=T}
+
+data {
+int<lower=0> N; // number of trials
+int<lower=0, upper=1> y[N]; // success on trial n
+}
+parameters {
+real<lower=0, upper=1> theta; // chance of success
+}
+model {
+theta ~ uniform(0, 1); // prior
+for (n in 1:N)
+y[n] ~ bernoulli(theta); // likelihood
+}
+
+
+```
 
 
