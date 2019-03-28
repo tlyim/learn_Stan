@@ -1,5 +1,5 @@
 ---
-title: "try Stan - following JSS articles"
+title: "try Stan - following Stan documentation's and Michael Betancourt's example codes"
 output: html_notebook
 ---
 
@@ -102,11 +102,8 @@ model {
   alpha ~ normal(0, 1);
   sigma ~ normal(0, 1);
 
-/* Note: Note sure why a nugget or jitter of 10^−10 is not added, with its place apparently replcated by 'square(sigma)'
-
-so the marginal covariance matrix before computing its Cholesky decomposition in order to stabilize the numerical calculations. Often the nugget is taking to be square root of the floating point precision, which would be 10−8 for double precision calculations.
- https://betanalpha.github.io/assets/case_studies/gp_part1/part1.html
-*/
+// https://mc-stan.org/docs/2_18/stan-users-guide/fit-gp-section.html
+// https://betanalpha.github.io/assets/case_studies/gp_part3/part3.html
   Kcov = cov_exp_quad(t, alpha, rho) + diag_matrix(rep_vector(square(sigma), G));
 //                                                                  ^
   Lcov = cholesky_decompose(Kcov);
@@ -123,8 +120,7 @@ generated quantities {
 ```
 
 
-# Simulate simple data and estimate with OLS
-(the simplicity gives quite accurate estimates)
+# Simulate data and estimate underlying parameters
 ```{r}
 
 N = 99*3  #9999  
@@ -192,7 +188,7 @@ sim_EM_data <- list(N = N,
 
 ```
 
-# Fit the debug and full model of complete pooling
+# Fit the debug and full model 
 ```{r}
 # Run the debug model to make sure the Stan code complies properly 
 fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
@@ -217,7 +213,7 @@ fit1 <- stan(
 
 ```
 
-# Summary of the posterior sample for phi
+# Summary of the posterior sample 
 ```{r}
 
 ss_complete_pool <- extract(fit1);
