@@ -21,7 +21,7 @@ options(mc.cores = parallel::detectCores())  #
 ```
 
 # Simulate GP data
-```{stan output.var=simu_gauss, eval=T}
+```{stan output.var=simu_GP, eval=T}
 data {
   int<lower=1> N;
   real x[N];
@@ -32,8 +32,10 @@ data {
 }
 
 transformed data {
-  matrix[N, N] cov =   cov_exp_quad(x, alpha, rho)
-                     + diag_matrix(rep_vector(1e-10, N));
+/* Note: added a nugget or jitter of 10^−10 so the marginal covariance matrix before computing its Cholesky decomposition in order to stabilize the numerical calculations. Often the nugget is taking to be square root of the floating point precision, which would be 10−8 for double precision calculations.
+ https://betanalpha.github.io/assets/case_studies/gp_part1/part1.html
+*/
+  matrix[N, N] cov = cov_exp_quad(x, alpha, rho) + diag_matrix(rep_vector(1e-10, N));
   matrix[N, N] L_cov = cholesky_decompose(cov);
 }
 
@@ -50,41 +52,42 @@ generated quantities {
 
 # Estimate the simulated model with Stan - misreporting extent generated from a Gaussian Process
   (forecasts specified in generated quantities block)
-```{stan output.var=lmExample, eval=T}
+```{stan output.var=misreport, eval=T}
 
 // The input data is a vector 'y' of length 'N'.
 data {
   int<lower=0> N; // number of observations (for different CEOs/firms)
   int<lower=0> K; // number of coefficents (/predictors)
-  vector[N] y; // dependent variable
-  matrix[N,K] X; // predictor variables
+  vector[N] r; // dependent variable (reported company earnings, scaled by Rev, total revenue)
+  matrix[N,K] Z; // predictor variables (main components of earnings, all scaled by Rev: 
+                      // COGS2Rev, SGA2Rev, RnD2Rev with Rev2Rev = unit vector as the intercept)
   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
 
 // forecasts  
   int<lower=0> N_new; // number of predictions
-  matrix[N_new,K] X_new; // 
+  matrix[N_new,K] Z_new; // 
   
 // GP data
-  int<lower=0> G;
-  real z[G];     // ie, x of the GP cov matrix
-  vector[G] m;  // misreporting extent
+  int<lower=0> G; // number of observed points from the realized GP function
+  real t[G];     // ie, range of function input (ie, x of f(x)) to the realized GP function f(x)
+  vector[G] m;  // misreporting extent (ie, y = f(x) the function value of the realized GP function)
 }
 transformed data {
 // GP data
 }
 parameters {
   vector[K] b; // coefficients of the predictor variables
-  real<lower=0> sd_y; // sd of error term
+  real<lower=0> sd_r; // sd of reported earnings
   real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
 //  vector[N] integrity;     // integrity level of each CEO affecting the decision to misreport or not
 
-// GP parameters
+// est'd coefficients for the GP kernel parameters
   real<lower=0> rho;
   real<lower=0> alpha;
   real<lower=0> sigma;
 }
 transformed parameters {
-  real ilogodds;     // integrity level of the society affecting the decision to misreport or not
+  real ilogodds;     // log odds of the society integrity level
   ilogodds = logit(integrity);   
 }
 model {
@@ -92,23 +95,29 @@ model {
   matrix[G, G] Lcov;
 
 // b ~ cauchy(0, 2.5); // common prior for each b[K]
-  y ~ normal(X*b, sd_y);
+  r ~ normal(Z*b, sd_r);
   M ~ bernoulli_logit(ilogodds); 
 
-  rho ~ gamma(2, 20);
+  rho ~ inv_gamma(5,30);    // (5,5) (8.91924, 34.5805);
   alpha ~ normal(0, 1);
   sigma ~ normal(0, 1);
 
-  Kcov = cov_exp_quad(z, alpha, rho) + diag_matrix(rep_vector(square(sigma), G));
+/* Note: Note sure why a nugget or jitter of 10^−10 is not added, with its place apparently replcated by 'square(sigma)'
+
+so the marginal covariance matrix before computing its Cholesky decomposition in order to stabilize the numerical calculations. Often the nugget is taking to be square root of the floating point precision, which would be 10−8 for double precision calculations.
+ https://betanalpha.github.io/assets/case_studies/gp_part1/part1.html
+*/
+  Kcov = cov_exp_quad(t, alpha, rho) + diag_matrix(rep_vector(square(sigma), G));
+//                                                                  ^
   Lcov = cholesky_decompose(Kcov);
 
-  m ~ multi_normal_cholesky(rep_vector(0, G), Lcov);   // rep_vector(0, G) is the zero mean assumed
+  m ~ multi_normal_cholesky(rep_vector(0, G), Lcov);   // rep_vector(0, G) is the zero mean assumed for the GP
 }
 
 generated quantities {
-  vector[N_new] y_new;
+  vector[N_new] r_new;
   for (n in 1:N_new)
-    y_new[n] = normal_rng(X_new[n] * b, sd_y);
+    r_new[n] = normal_rng(Z_new[n] * b, sd_r);
 }
 
 ```
@@ -118,69 +127,66 @@ generated quantities {
 (the simplicity gives quite accurate estimates)
 ```{r}
 
-N = 99  #9999
+N = 99*3  #9999  
 
-set.seed(555)  # set the seed for random generation to ensure replicability
-# X1 <- rep(1, N)
-# X2 <- rnorm(N) # simulate explanatory variable data based on randomly generated numbers following the normal dist
-# X3 <- rnorm(N) 
-X <- matrix(data = c(rep(1, N), rnorm(N), rnorm(N)), nrow = N)
+set.seed(123)  # set the seed for random generation to ensure replicability
+# Z matrix is composed of the columns of earnings components
+Z <- matrix(data = c(rep(1, N), rnorm(N), rnorm(N), rnorm(N)), 
+            nrow = N)
+colnames(Z) <- c("Rev2Rev", "COGS2Rev", "SGA2Rev", "RnD2Rev")
 
-#set actual parameters of the data generation process (DGP)
-#a = c(0.4, 0.1, -0.2)
-avec <- matrix(data = c(0.4, 0.1, -0.2), nrow = 3)  # define column vector
+#set actual parameters of the data generation process of the reported earnings (to total revenue ratio) 
+a = c(0.9, -0.4, -0.2, -0.05)
+avec <- matrix(data = a, nrow = length(a))  # define column vector as a matrix[N,1]
 
-# Simulate the logodds based on a linear model 
-# (Later, this true logit model will be estimated with observed data)
-#logodds <- a[1]*x1 + a[2]*x2 + a[3]*x3  
-sigma = 0.15
-e <- rnorm(N, sd = sigma)
-y <- (X %*% avec + e) %>% as.vector()  # Note: must use the parentheses before %>%; o/w, won't work
-# turn the output into a vector, rather than a matrix[N,1]
+# Simulate the earnings based on a linear model (Later, this model will be estimated with observed data)
+sd_r = 0.15
+r <- rnorm(N, mean = (Z %*% avec), sd = sd_r)  # reported company earnings, scaled by Rev, total revenue)
 
-mod_OLS <- lm(y ~ . + 0, data = data.frame(y, X))  # + 0 to remove intercept as X1 is the unit vector for intercept
+mod_OLS <- lm(r ~ . + 0, data = data.frame(r, Z))  # + 0 to remove intercept as Rev2Rev is the unit vector for intercept
 summary(mod_OLS)
 
-integrity = 0.8
-M <- rbinom(N, 1, integrity)
+integrity = 0.8       # integrity level of the society, interpreted as likelihood to behave opportunistically
+M <- rbinom(N, 1, integrity)   # the decision to misreport earnings
 
 
 # Simulate GP data
-rho_true <- 5.5
-alpha_true <- 3
-sigma_true <- 2
+rho_T <- 5.5   # set true parameters for the exponential kernel of the GP
+alpha_T <- 3
+sigma_T <- 2
 
-N_total = 501
-z_total <- 20 * (0:(N_total - 1)) / (N_total - 1) - 10
+g = 1 # approx. about g times of N
+G_total = g*(N+1) + 1
+t_total <- 20 * (0:(G_total - 1)) / (G_total - 1) - 10   # rescale the range of z to [-10,10]
 
-simu_data <- list(rho=rho_true, alpha=alpha_true, sigma=sigma_true,
-                  N=N_total, x=z_total)
+sim_GP_data <- list(rho=rho_T, 
+                  alpha=alpha_T, 
+                  sigma=sigma_T, 
+                  N=G_total, 
+                  x=t_total)
 
-simu_fit <- stan(model_code = simu_gauss@model_code, data=simu_data, iter=1,
-            chains=1, seed=494838, algorithm="Fixed_param")
+simu_fit <- stan(model_code = simu_GP@model_code, data=sim_GP_data, iter=1,
+            chains=1, seed=321, algorithm="Fixed_param")
 
-f_total <- extract(simu_fit)$f[1,]
 m_total <- extract(simu_fit)$y[1,]  # misreporting extent = the sample y of from the true realization GP f
-
-true_realization <- data.frame(f_total, z_total)
-names(true_realization) <- c("f_total", "z_total")
-
-observed_idx <- c(5*(1:99))  # Get N+1 observed points
-z <- z_total[observed_idx]     
-m <- m_total[observed_idx]
+# true_realization <- data.frame(f_total = extract(simu_fit)$f[1,], 
+#                                t_total = t_total)
+observed_t <- c(g*(1:N))  # Get N observed points evenly over the range [-10,10]
+t <- t_total[observed_t]     
+m <- m_total[observed_t]
 
 
-# Prepare simulated data for estimation using MCMC
+# Prepare simulated earnings management (EM) data for estimation using MCMC
 N_new = 3
-sim_1_data <- list(N = N, 
-                 K = 3,
-                 y = y, 
-                 X = X,
+sim_EM_data <- list(N = N, 
+                 K = length(a),
+                 r = r, 
+                 Z = Z,
                  M = M,
                  G = N,
-                 z = z,
+                 t = t,
                  m = m,
-                 X_new = X[1:N_new,],
+                 Z_new = Z[1:N_new,],
                  N_new = N_new
                  )
 
@@ -189,22 +195,20 @@ sim_1_data <- list(N = N,
 # Fit the debug and full model of complete pooling
 ```{r}
 # Run the debug model to make sure the Stan code complies properly 
-fit0_debug <- stan(model_code = lmExample@model_code, data = sim_1_data, iter = 10, chains = 1)
+fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({
 fit1 <- stan(
-#  file = "schools.stan",  # Stan program
-#  model_code = completepool@model_code,  # either the @model_code of the model definition 
-                                    # or the name of a string object containing the model description
-  data = sim_1_data,    # named list of data
+#  file = "misreport.stan",  # Stan program
+  data = sim_EM_data,    # named list of data
   fit = fit0_debug,   # to save compilation time if the debug model was run
 #  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
 #  chains = 1,             # default is 4 Markov chains
 #  cores = 8,
-  seed = 123,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
+#  seed = 555,
   iter = 2000,            # total number of iterations per chain
 #  warmup = 1000,          # number of warmup iterations per chain
   refresh = 1000          # = 0 means no progress shown
@@ -217,138 +221,12 @@ fit1 <- stan(
 ```{r}
 
 ss_complete_pool <- extract(fit1);
-#print(fit1, c("phi"), probs = c(0.1, 0.5, 0.9))
-print(fit1, probs = c(0.1, 0.5, 0.9))
+print(fit1, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 
-# effective sample size is good 
-# (roughly half the number of posterior draws; 
-#  by default Stan uses as many iterations to warmup as it does for drawing the sample).
+source('stan_utility.R')
+check_all_diagnostics(fit1)
 
 ```
 
-
-
-
-
-
-
-
-#############################################################################################
-
-# Estimate the simulated model with Stan (forecasts specified in generated quantities block)
-```{stan output.var=lmExample, eval=T}
-
-data {
-  int<lower=0> N; // number of observations (for different CEOs/firms)
-  int<lower=0> K; // number of coefficents (/predictors)
-  vector[N] y; // dependent variable
-  matrix[N,K] X; // predictor variables
-  int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
-  
-  int<lower=0> N_new; // number of predictions
-  matrix[N_new,K] X_new; //  
-}
-transformed data {
-// X1 = 1
-}
-parameters {
-  vector[K] b; // coefficients of the predictor variables
-  real<lower=0> sigma; // sd of error term
-  real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
-//  vector[N] integrity;     // integrity level of each CEO affecting the decision to misreport or not
-}
-transformed parameters {
-  real ilogodds;     // integrity level of the society affecting the decision to misreport or not
-  ilogodds = logit(integrity);
-}
-model {
-// b ~ cauchy(0, 2.5); // common prior for each b[K]
-  y ~ normal(X*b, sigma);
-  M ~ bernoulli_logit(ilogodds); // likelihood
-  
-/*
-   CEO's choice of misreporting (explore) vs. truth-telling (exploit) is modelled as discrete choice
-     use bernoulli_logit() ?
-   The stochastic process (GP? with -ve due to accrual reversal constraint?) of maximally feasible extent of misreporting
-     is exogenous to the CEO but the realized value of this in a period affects the achievable reward of misreporting
-     GP mean depends on (slowly changing) time-varying firm-specific, industry-specific, and macroeconomic factors ?
-   Assume for simplicity that conditional on the decision to misreport, it is always optimal to choose the max extent
-     Determinants of explore-exploit include 
-       parameters: CEO-specific Integrity, 
-       variables: firm-specific ERC, allowable misreporting limit
-   Misreported CEO also learns directly the updated ERC for his firm, the incremental effect of misreporting, and
-     *most importantly* the likelihood of being caught through the following period (because he knows there's misreporting). 
-     Truth-telling would be harder to learn the likelihood of being caught because observing no restatement by other firms
-       cannot clearly tell whether there was no misreporting or misreporting remains not caught. 
-     Investors are smart enough to condition their ERC response according to the firm characteristics, etc
-       For example, in bad economic times, the reward from misreporting becomes relatively higher. 
-    Background noise (ie, likelihood or errors as opposed to irregularities) affects the incentive to misreport   
-   To begin, assume CEO works for only one firm for his whole life. 
-   Keep in mind that the unrestated earnings is a mix of misreported and truth-told earnings
-      Also, assume
-      - an exogenous fraction of all misreporting will be discovered in the next period 
-          (regardless of the misreporting extent in an instance)
-      - the fraction follows a stohastic process (again, with the mean slowly changing over time)
-   Thus, the count of restatement each period, adjusted by a multiple, is an estimate of accumulated misreporting
-     instances in the past     
-*/
-  
-}
-generated quantities {
-  vector[N_new] y_new;
-  for (n in 1:N_new)
-    y_new[n] = normal_rng(X_new[n] * b, sigma);
-}
-
-```
-
-# Estimate the simulated model with Stan (forecasts specified in parameters+model blocks)
-```{stan output.var=lmExample, eval=T}
-
-data {
-  int<lower=0> N; // number of observations
-  int<lower=0> K; // number of coefficents (/predictors)
-  vector[N] y; // dependent variable
-  matrix[N,K] X; // predictor variables
-  int<lower=0> N_new; // number of predictions
-  matrix[N_new,K] X_new; //  
-}
-transformed data {
-// X1 = 1
-}
-parameters {
-  vector[K] b; // coefficients of the predictor variables
-  real<lower=0> sigma; // sd of error term
-  vector[N_new] y_new;
-}
-model {
-  y ~ normal(X*b, sigma);
-  y_new ~ normal(X_new * b, sigma);
-}
-generated quantities {
-//  vector[N_new] y_new;
-//  for (n in 1:N_new)
-//    y_new[n] = normal_rng(X_new[n] * b, sigma);
-}
-
-```
-
-```{stan output.var=simpleExample, eval=T}
-
-data {
-int<lower=0> N; // number of trials
-int<lower=0, upper=1> y[N]; // success on trial n
-}
-parameters {
-real<lower=0, upper=1> theta; // chance of success
-}
-model {
-theta ~ uniform(0, 1); // prior
-for (n in 1:N)
-y[n] ~ bernoulli(theta); // likelihood
-}
-
-
-```
 
 
