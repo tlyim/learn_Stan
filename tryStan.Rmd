@@ -1,6 +1,6 @@
 ---
-title: "try Stan - following Stan documentation's and Michael Betancourt's example codes"
-output: html_notebook
+title: "Release 0.1.0: try Stan - modified from Stan documentation's and Michael Betancourt's example codes"
+output: html_notebook 
 ---
 
 
@@ -9,6 +9,9 @@ output: html_notebook
 #library(tidyverse)
 library(dplyr)
 library(magrittr)
+
+#load previously saved Stan model objects
+load(file = "StanObjects.rda")
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
 
@@ -21,7 +24,7 @@ options(mc.cores = parallel::detectCores())  #
 ```
 
 # Simulate GP data
-```{stan output.var=simu_GP, eval=T}
+```{stan output.var=simu_GP, eval=F}
 data {
   int<lower=1> N;
   real x[N];
@@ -52,7 +55,7 @@ generated quantities {
 
 # Estimate the simulated model with Stan - misreporting extent generated from a Gaussian Process
   (forecasts specified in generated quantities block)
-```{stan output.var=misreport, eval=T}
+```{stan output.var=misreport, eval=F}
 
 // The input data is a vector 'y' of length 'N'.
 data {
@@ -98,9 +101,9 @@ model {
   r ~ normal(Z*b, sd_r);
   M ~ bernoulli_logit(ilogodds); 
 
-  rho ~ inv_gamma(5,30);    // (5,5) (8.91924, 34.5805);
-  alpha ~ normal(0, 1);
-  sigma ~ normal(0, 1);
+  rho ~ inv_gamma(5,30);    // (5,5) (8.91924, 34.5805);                    rho_T = 5.5
+  alpha ~ gamma(1.5,0.5); // gamma(3,1)   normal(0, 3);     // (0, 2)  (0,1)    alpha_T = 3
+  sigma ~ gamma(1,0.5); // gamma(2,1)   normal(0, 2);     // (0, 1.5)  (0,1)  sigma_T = 2    
 
 // https://mc-stan.org/docs/2_18/stan-users-guide/fit-gp-section.html
 // https://betanalpha.github.io/assets/case_studies/gp_part3/part3.html
@@ -120,12 +123,16 @@ generated quantities {
 ```
 
 
-# Simulate data and estimate underlying parameters
+# Save/Load Stan objects; Simulate data and estimate underlying parameters
 ```{r}
 
-N = 99*3  #9999  
+save(simu_GP, misreport, file = "StanObjects.rda")
+load(file = "StanObjects.rda")
 
-set.seed(123)  # set the seed for random generation to ensure replicability
+N = 99*4 + 50  #9999
+
+#set.seed(88)  # set the seed for random generation to ensure replicability
+
 # Z matrix is composed of the columns of earnings components
 Z <- matrix(data = c(rep(1, N), rnorm(N), rnorm(N), rnorm(N)), 
             nrow = N)
@@ -162,7 +169,8 @@ sim_GP_data <- list(rho=rho_T,
                   x=t_total)
 
 simu_fit <- stan(model_code = simu_GP@model_code, data=sim_GP_data, iter=1,
-            chains=1, seed=321, algorithm="Fixed_param")
+            chains=1, algorithm="Fixed_param")  
+                      #seed=987, 
 
 m_total <- extract(simu_fit)$y[1,]  # misreporting extent = the sample y of from the true realization GP f
 # true_realization <- data.frame(f_total = extract(simu_fit)$f[1,], 
@@ -195,19 +203,19 @@ fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter =
 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({
-fit1 <- stan(
+fit1 <- stan( 
 #  file = "misreport.stan",  # Stan program
   data = sim_EM_data,    # named list of data
   fit = fit0_debug,   # to save compilation time if the debug model was run
-#  control = list(adapt_delta = 0.95),    # adjust when there're divergent transitions after warmup
+  control = list(adapt_delta = 0.90),    # adjust when there're divergent transitions after warmup
 #  chains = 1,             # default is 4 Markov chains
 #  cores = 8,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
 #  seed = 555,
-  iter = 2000,            # total number of iterations per chain
+  iter = 300, #500 #2000,            # total number of iterations per chain
 #  warmup = 1000,          # number of warmup iterations per chain
-  refresh = 1000          # = 0 means no progress shown
+  refresh = 100#0          # = 0 means no progress shown
   )
 })
 
