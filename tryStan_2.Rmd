@@ -26,9 +26,9 @@ csl: nature.csl  #CSL style file (nature.csl) downloaded from Zotero Style Repos
 
 ```{r}
 
-#library(tidyverse)
+#library(magrittr)
 library(dplyr)
-library(magrittr)
+#library(tidyverse)
 
 #load previously saved Stan model objects
 load(file = "StanObjects.rda")
