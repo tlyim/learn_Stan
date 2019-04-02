@@ -27,7 +27,7 @@ csl: nature.csl  #CSL style file (nature.csl) downloaded from Zotero Style Repos
 ```{r}
 
 #library(magrittr)
-library(dplyr)
+#library(dplyr)
 #library(tidyverse)
 
 #load previously saved Stan model objects
@@ -121,8 +121,8 @@ model {
   r ~ normal(Z*b, sd_r);
   M ~ bernoulli_logit(ilogodds); 
 
-  rho ~ inv_gamma(5,30);    // (5,5) (8.91924, 34.5805);                    rho_T = 5.5
-  alpha ~ gamma(1.5,0.5); // gamma(3,1)   normal(0, 3);     // (0, 2)  (0,1)    alpha_T = 3
+  rho ~ inv_gamma(5,20);    // (5,30) (5,5) (8.91924, 34.5805);                    rho_T = 5.5
+  alpha ~ gamma(3,1); // gamma(1.5,0.5)  normal(0, 3);     // (0, 2)  (0,1)    alpha_T = 3
   sigma ~ gamma(1,0.5); // gamma(2,1)   normal(0, 2);     // (0, 1.5)  (0,1)  sigma_T = 2    
 
 // https://mc-stan.org/docs/2_18/stan-users-guide/fit-gp-section.html
@@ -143,11 +143,8 @@ generated quantities {
 ```
 
 
-# Save/Load Stan objects; Simulate data and estimate underlying parameters
+# Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
-
-save(simu_GP, misreport, file = "StanObjects.rda")
-load(file = "StanObjects.rda")
 
 N = 99*5#4 + 50  #9999
 
@@ -214,12 +211,15 @@ sim_EM_data <- list(N = N,
                  N_new = N_new
                  )
 
+# Fit the debug model to make sure the Stan code complies properly 
+fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
+
+save(simu_GP, misreport, file = "StanObjects.rda")
+#load(file = "StanObjects.rda")
 ```
 
-# Fit the debug and full model 
+# Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
-# Run the debug model to make sure the Stan code complies properly 
-fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({
