@@ -13,7 +13,7 @@ rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan program
 options(mc.cores = parallel::detectCores())  # 
 
 # The following throws an error in compiling .stan
-#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
 
 
 
@@ -62,10 +62,14 @@ sim_GP_data <- list(rho=rho_T,
                   N=G_total, 
                   x=t_total)
 
+
+simu_GP <- readRDS(file = "simu_GP.rds")
 simu_fit <- stan(model_code = simu_GP@model_code, data=sim_GP_data, iter=1,
 #simu_fit <- stan("simu_GP.stan", data=sim_GP_data, iter=1,
             chains=1, algorithm="Fixed_param")  
                       #seed=987, 
+saveRDS(simu_GP, file = "simu_GP.rds")
+
 
 m_total <- extract(simu_fit)$y[1,]  # misreporting extent = the sample y of from the true realization GP f
 # true_realization <- data.frame(f_total = extract(simu_fit)$f[1,], 
@@ -95,15 +99,19 @@ sim_EM_data <- list(N = N,
 # Fit the debug and full model 
 ######################################################################################
 #```{r}
+
+
 # Run the debug model to make sure the Stan code complies properly 
-fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
-#fit0_debug <- stan("misreport.stan", data = sim_EM_data, iter = 10, chains = 1)
+misreport <- readRDS(file = "misreport.rds")
+#fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
+fit0_debug <- stan("misreport.stan", data = sim_EM_data, iter = 10, chains = 1)
+saveRDS(misreport, file = "misreport.rds")
+
 
 
 ls()
 #save(simu_GP, misreport, file = "StanObjects.rda")
 #load(file = "StanObjects.rda")
-
 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({

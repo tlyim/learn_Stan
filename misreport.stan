@@ -42,9 +42,9 @@ model {
   r ~ normal(Z*b, sd_r);
   M ~ bernoulli_logit(ilogodds); 
 
-  rho ~ inv_gamma(5,20);#30);    // (5,5) (8.91924, 34.5805);                    rho_T = 5.5
-  alpha ~ gamma(1.5,0.5); // gamma(3,1)   normal(0, 3);     // (0, 2)  (0,1)    alpha_T = 3
-  sigma ~ gamma(1,0.5); // gamma(2,1)   normal(0, 2);     // (0, 1.5)  (0,1)  sigma_T = 2    
+  rho ~ inv_gamma(5,20); //30);    // (5,5) (8.91924, 34.5805);           //   rho_T = 5.5;
+  alpha ~ gamma(1.5,0.5); // gamma(3,1)   normal(0, 3);     // (0, 2)  (0,1)   alpha_T = 3;
+  sigma ~ gamma(1,0.5); // gamma(2,1)   normal(0, 2);     // (0, 1.5)  (0,1)   sigma_T = 2;    
 
 // https://mc-stan.org/docs/2_18/stan-users-guide/fit-gp-section.html
 // https://betanalpha.github.io/assets/case_studies/gp_part3/part3.html
