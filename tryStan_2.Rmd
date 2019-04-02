@@ -31,7 +31,8 @@ csl: nature.csl  #CSL style file (nature.csl) downloaded from Zotero Style Repos
 #library(tidyverse)
 
 #load previously saved Stan model objects
-load(file = "StanObjects.rda")
+#load(file = "StanObjects.rda")
+
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
 
@@ -44,7 +45,7 @@ options(mc.cores = parallel::detectCores())  #
 ```
 
 # Simulate GP data
-```{stan output.var=simu_GP, eval=F}
+```{stan output.var=simu_GP, eval=T}
 data {
   int<lower=1> N;
   real x[N];
@@ -75,7 +76,7 @@ generated quantities {
 
 # Estimate the simulated model with Stan - misreporting extent generated from a Gaussian Process
   (forecasts specified in generated quantities block)
-```{stan output.var=misreport, eval=F}
+```{stan output.var=misreport, eval=T}
 
 // The input data is a vector 'y' of length 'N'.
 data {
@@ -185,9 +186,9 @@ sim_GP_data <- list(rho=rho_T,
                   N=G_total, 
                   x=t_total)
 
-simu_fit <- stan(model_code = simu_GP@model_code, data=sim_GP_data, iter=1,
-            chains=1, algorithm="Fixed_param")  
-                      #seed=987, 
+simu_fit <- stan(model_code = simu_GP@model_code, data=sim_GP_data, iter=1, 
+            chains=1, algorithm="Fixed_param")  #seed=987,  
+                      
 
 m_total <- extract(simu_fit)$y[1,]  # misreporting extent = the sample y of from the true realization GP f
 # true_realization <- data.frame(f_total = extract(simu_fit)$f[1,], 
@@ -214,7 +215,7 @@ sim_EM_data <- list(N = N,
 # Fit the debug model to make sure the Stan code complies properly 
 fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
 
-save(simu_GP, misreport, file = "StanObjects.rda")
+#save(simu_GP, misreport, file = "StanObjects.rda")
 #load(file = "StanObjects.rda")
 ```
 
@@ -254,8 +255,8 @@ check_all_diagnostics(fit1)
 ```
 
 ```{r}
-warnings ()
-sessionInfo ()
+warnings()
+sessionInfo()
 ```
 
 
