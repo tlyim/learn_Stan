@@ -1,0 +1,34 @@
+n times						rho est. (=5.5)			alpha est. (=3)			sigma est. (=2)				
+ (of 99 obs)	total obs	time (user)	system 	 elapsed 	lp__		--n_eff	--Rhat		--n_eff	--Rhat					
+3	297	283.122	0.553	108.181	-81.181	5.542	286	1.007	1.545	246	1.022	1.879				
+3	"(2nd try, 1 core only)"	268.678	0.042	268.701	-145.994	4.823	193	1.029	3.598	250	1.029	2.176				
+4	396	493.266	0.302	199.813	-157.424	4.286	227	1.008	2.952	238	1.007	2.082				
+4	(2nd try)	566.725	0.38	223.265	-186.286	4.818	433	0.999	2.245	234	1.006	2.12				
+5	495	1131.484	1.287	405.866	-120.645	5.439	285	1.004	2.813	225	1.017	1.88				
+5	(2nd try)	893.744	0.601	325.718	-197.346	5.855	379	1.002	3.977	253	1.002	1.983				
+6	594	1746.771	1.021	664.03	-199.892	4.318	226	1.022	1.659	343	1.003	1.996				
+7	693	2438.372	3.689	892.547	-210.669	5.336	218	1.013	4.853	151	1.017	1.992				
+8	792	3602.494	1.562	1484.676	-278.444	4.863	496	1.005	2.188	417	1.001	2.075				
+9	891	4889.948	2.702	1885.201	-271.386	6.737	264	1.017	3.049	189	1.013	2.052				
+10	990	6110.68	0.895	2194.017	-329.724	3.607	332	1.01	1.181	194	1.029	2.028				
+																
+rho	~	"inv_gamma(5,20)"														
+alpha	~	"gamma(1.5,0.5)"														
+sigma	~	"gamma(1,0.5)"														
+																
+																
+>	check_all_diagnostics(fit1)															
+[1]	n_eff / iter looks reasonable for all parameters															
+[1]	Rhat looks reasonable for all parameters															
+[1]	0 of 600 iterations ended with a divergence (0%)															
+[1]	0 of 600 iterations saturated the maximum tree depth of 10 (0%)															
+[1]	E-BFMI indicated no pathological behavior															
+																
+"4 chains, each with iter=300; warmup=150; thin=1; "																
+"post-warmup draws per chain=150, total post-warmup draws=600. "																
+																
+																
+"Executed with compute nodes in a cluster, all with"																
+R version 3.5.1 (2018-07-02)																
+Platform: x86_64-redhat-linux-gnu (64-bit)																
+Running under: Red Hat Enterprise Linux Server 7.6 (Maipo)																
