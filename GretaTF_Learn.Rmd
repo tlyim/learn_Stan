@@ -1,0 +1,135 @@
+---
+title: "A Bayesian model using Hamiltonian Monte Carlo sampling built in R and evaluated by TensorFlow"
+subtitle: "Using greta::mcmc()" 
+output: html_notebook
+---
+
+```{r}
+
+install_tensorflow()
+install.packages(c("coda","mvtnorm","devtools","loo"))
+#library(devtools)
+#devtools::install_github("rmcelreath/rethinking")
+library(rethinking)
+library(greta)
+library(DiagrammeR)
+library(bayesplot)
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+Prepare data
+```{r}
+# Example from section 8.3 Statistical Rethinking
+
+data(rugged)
+# d <- rugged
+# d$log_gdp <- log(d$rgdppc_2000)
+# dd <- d[complete.cases(d$rgdppc_2000), ]
+# dd_trim <- dd[ , c("log_gdp","rugged","cont_africa")]
+
+dd_trim <- rugged %>% # d %>% 
+  mutate(log_gdp = log(d$rgdppc_2000)) %>% 
+  filter(complete.cases(rgdppc_2000)) %>% 
+  select(log_gdp, rugged, cont_africa) 
+
+dd_trim
+
+#set.seed(1234)
+
+```
+
+
+# Set up tensor flow's data structures (greta's data_node array objects)
+Note: greta doesn’t immediately calculate values for new arrays. It works out the size and shape of the result and creates a place-holder data structure.
+
+```{r}
+
+g_log_gdp <- as_data(dd_trim$log_gdp)
+g_rugged <- as_data(dd_trim$rugged)
+g_cont_africa <- as_data(dd_trim$cont_africa)
+
+```
+
+
+# Set up Bayesian model
+Note: The parameters a, bR, bA, bAR, sigma, and mu are all new greta arrays that don’t contain any data
+```{r}
+
+# Variables and Priors
+
+a <- normal(0, 100)
+bR <- normal(0, 10)
+bA <- normal(0, 10)
+bAR <- normal(0,10)
+sigma <- cauchy(0,2,truncation=c(0,Inf))
+
+# > a
+# 
+# greta array (variable following a normal distribution)
+# 
+#      [,1]
+# [1,]  ?  
+
+# operations
+mu <- a + bR*g_rugged + bA*g_cont_africa + bAR*g_rugged*g_cont_africa
+
+# > dim(mu)
+## [1] 170   1
+
+# sets up the likelihood function for the model
+distribution(g_log_gdp) = normal(mu, sigma)
+
+```
+
+
+Define the model 
+Note: The model() function does all of the work. It fits the model and produces a fairly complicated object organized as three lists that contain, respectively, the R6 class, TensorFlow structures, and the various greta data arrays.
+```{r}
+
+# defining the model
+mod <- model(a,bR,bA,bAR,sigma)
+
+str(mod,give.attr=FALSE,max.level=1)
+
+# plotting
+plot(mod)
+```
+
+
+Use greta::mcmc() to sample from the posterior distributions defined in the model
+
+```{r}
+draws <- mcmc(mod, n_samples = 1000)
+summary(draws)
+```
+
+
+Posterior distribution of the interaction term (bAR)
+
+```{r}
+
+mat <- data.frame(matrix(draws[[1]],ncol=5))
+names(mat) <- c("a","bR","bA","bAR","sigma")
+
+mat %>% 
+  ggplot(aes(x=bAR)) + 
+  geom_histogram(aes(y=..density..), binwidth=.05, colour="black", fill="white") +
+  geom_density(alpha=.2, fill="#FF6666") 
+```
+
+
+
+
+* mcmc_trace() to examine the trace plots for the MCMC samples using the greta function. 
+  - The plots for each parameter appear to be stationary (flat, i.e., centered on a constant value) and well-mixed (there is no obvious correlation between points). 
+* mcmc_intervals() plots the uncertainty intervals for each parameter computed from posterior draws with all chains merged.
+```{r}
+mcmc_trace(draws)
+
+mcmc_intervals(draws)
+```
+
+

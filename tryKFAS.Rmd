@@ -1,0 +1,286 @@
+---
+title: "try KFAS"
+output: html_notebook
+---
+
+```{r}
+#library(bssm)
+library(KFAS) 
+
+help(KFAS) 
+```
+
+#
+y[t] = Z[t]α[t] + ε[t], (observation equation)
+
+α[t+1] = T[t]α[t] + R[t]η[t], (transition equation)
+
+where ε[t] ~ N(0, H[t]), η[t] ~ N(0, Q[t]) and α[1] ~ N(a[1], P[1]) independently of each other.
+
+All system and covariance matrices Z, H, T, R and Q can be time-varying, and partially or totally missing observations y[t] are allowed.
+
+Covariance matrices H and Q has to be positive semidefinite (although this is not checked).
+
+Model components in KFAS are defined as
+
+y = n x p matrix containing the observations.
+Z = p x m x 1 or p x m x n array corresponding to the system matrix of observation equation.
+H = p x p x 1 or p x p x n array corresponding to the covariance matrix of observational disturbances epsilon.
+
+T = m x m x 1 or m x m x n array corresponding to the first system matrix of state equation.
+R = m x k x 1 or m x k x n array corresponding to the second system matrix of state equation.
+Q = k x k x 1 or k x k x n array corresponding to the covariance matrix of state disturbances eta
+
+a1 = m x 1 matrix containing the expected values of the initial states.
+P1 = m x m matrix containing the covariance matrix of the [nondiffuse] part of the initial state vector.
+P1inf = m x m matrix containing the covariance matrix of the [diffuse] part of the initial state vector.
+
+#=======================================================================================================
+
+
+# Create a State Space Model Object of Class SSModel
+```{r}
+# add intercept to state equation by augmenting the state vector:
+# diffuse initialization for the intercept, gets estimated like other states:
+# for known fixed intercept, just set P1 = P1inf = 0 (default in SSMcustom).
+intercept <- 0
+model_int <- SSModel(Nile ~ SSMtrend(1, Q = 1469) +
+SSMcustom(Z = 0, T = 1, Q = 0, a1 = intercept, P1inf = 1), H = 15099)
+model_int$T
+model_int$T[1, 2, 1] <- 1 # add the intercept value to level
+out <- KFS(model_int)
+```
+
+
+```{r}
+# dynamic regression model
+set.seed(1)
+x1 <- rnorm(100)
+x2 <- rnorm(100)
+b1 <- 1 + cumsum(rnorm(100, sd = 1))
+b2 <- 2 + cumsum(rnorm(100, sd = 0.1))
+y <- 1 + b1 * x1 + b2 * x2 + rnorm(100, sd = 0.1)
+model <- SSModel(y ~ SSMregression(~ x1 + x2, Q = diag(NA,2)), H = NA)
+fit <- fitSSM(model, inits = c(0,0,0), method = "BFGS")
+model <- fit$model
+model$Q
+model$H
+out <- KFS(model)
+ts.plot(out$alphahat[,-1], b1, b2, col = 1:4)
+
+```
+
+
+# example of using [data] argument 
+```{r}
+y <- x <- rep(1, 3)
+data1 <- data.frame(x = rep(2, 3))
+data2 <- data.frame(x = rep(3, 3))
+f <- formula(~ -1 + x)
+
+# With data missing the environment of formula is checked,
+# and if not found in there a calling environment via parent.frame is checked.
+c(SSModel(y ~ -1 + x)["Z"]) # 1
+c(SSModel(y ~ -1 + x, data = data1)["Z"]) # 2
+c(SSModel(y ~ -1 + SSMregression(~ -1 + x))["Z"]) # 1
+c(SSModel(y ~ -1 + SSMregression(~ -1 + x, data = data1))["Z"]) # 2
+c(SSModel(y ~ -1 + SSMregression(~ -1 + x), data = data1)["Z"]) # 2
+SSModel(y ~ -1 + x + SSMregression(~ -1 + x, data = data1))["Z"] # 1 and 2
+SSModel(y ~ -1 + x + SSMregression(~ -1 + x), data = data1)["Z"] # both are 2
+SSModel(y ~ -1 + x + SSMregression(~ -1 + x, data = data1), data = data2)["Z"] # 3 and 2
+SSModel(y ~ -1 + x + SSMregression(f))["Z"] # 1 and 1
+SSModel(y ~ -1 + x + SSMregression(f), data = data1)["Z"] # 2 and 1
+SSModel(y ~ -1 + x + SSMregression(f,data = data1))["Z"] # 1 and 2
+rm(x)
+c(SSModel(y ~ -1 + SSMregression(f, data = data1))$Z) # 2
+
+## Not run:
+# This fails as there is no x in the environment of f
+try(c(SSModel(y ~ -1 + SSMregression(f), data = data1)$Z))
+## End(Not run)
+```
+
+
+# [<-.SSModel Extract or Replace Parts of a State Space Model
+```{r}
+
+set.seed(1)
+model <- SSModel(rnorm(10) ~ 1)
+model["H"]
+model["H"] <- 10
+# H is still an array:
+model["H"]
+logLik(model)
+model$H <- 1
+# model["H"] throws an error as H is now scalar:
+model$H
+logLik(model, check.model = TRUE) #with check.model = FALSE R crashes!
+
+```
+
+
+
+
+
+################################################################
+## using deterministic inputs in observation and state equations
+################################################################
+```{r}
+model_Nile <- SSModel(Nile ~ 
+  SSMcustom(Z=1, T = 1, R = 0, a1 = 100, P1inf = 0, P1 = 0, Q = 0, state_names = "d_t") +
+  SSMcustom(Z=0, T = 1, R = 0, a1 = 100, P1inf = 0, P1 = 0, Q = 0, state_names = "c_t") +
+  SSMtrend(1, Q = 1500), H = 15000)
+model_Nile$T
+model_Nile$T[1, 3, 1] <- 1 # add c_t to level
+model_Nile0 <- SSModel(Nile ~ 
+  SSMtrend(2, Q = list(1500, 0), a1 = c(0, 100), P1inf = diag(c(1, 0))), 
+  H = 15000)
+
+ts.plot(KFS(model_Nile0)$mu, KFS(model_Nile)$mu, col = 1:2)
+```
+
+
+##########################################################
+### Examples of generalized linear modelling with KFAS ###
+##########################################################
+```{r}
+# Same example as in ?glm
+counts <- c(18, 17, 15, 20, 10, 20, 25, 13, 12)
+outcome <- gl(3, 1, 9)
+treatment <- gl(3, 3)
+glm_D93 <- glm(counts ~ outcome + treatment, family = poisson())
+
+model_D93 <- SSModel(counts ~ outcome + treatment,
+  distribution = "poisson")
+
+out_D93 <- KFS(model_D93)
+coef(out_D93, last = TRUE)
+coef(glm_D93)
+
+summary(glm_D93)$cov.s
+out_D93$V[, , 1]
+
+# approximating model as in GLM
+out_D93_nosim <- KFS(model_D93, smoothing = c("state", "signal", "mean"))
+
+# with importance sampling. Number of simulations is too small here,
+# with large enough nsim the importance sampling actually gives
+# very similar results as the approximating model in this case
+set.seed(1)
+out_D93_sim <- KFS(model_D93,
+  smoothing = c("state", "signal", "mean"), nsim = 1000)
+
+
+## linear predictor
+# GLM
+glm_D93$linear.predictor
+# approximate model, this is the posterior mode of p(theta|y)
+c(out_D93_nosim$thetahat)
+# importance sampling on theta, gives E(theta|y)
+c(out_D93_sim$thetahat)
+
+
+## predictions on response scale
+# GLM
+fitted(glm_D93)
+# approximate model with backtransform, equals GLM
+fitted(out_D93_nosim)
+# importance sampling on exp(theta)
+fitted(out_D93_sim)
+
+# prediction variances on link scale
+# GLM
+as.numeric(predict(glm_D93, type = "link", se.fit = TRUE)$se.fit^2)
+# approx, equals to GLM results
+c(out_D93_nosim$V_theta)
+# importance sampling on theta
+c(out_D93_sim$V_theta)
+
+
+# prediction variances on response scale
+# GLM
+as.numeric(predict(glm_D93, type = "response", se.fit = TRUE)$se.fit^2)
+# approx, equals to GLM results
+c(out_D93_nosim$V_mu)
+# importance sampling on theta
+c(out_D93_sim$V_mu)
+```
+
+
+
+## Not run: 
+####################################
+### Linear mixed model with KFAS ###
+####################################
+```{r}
+# example from ?lmer of lme4 pacakge
+data("sleepstudy", package = "lme4")
+
+model_lmm <- SSModel(Reaction ~ Days +
+    SSMregression(~ Days, Q = array(0, c(2, 2, 180)),
+       P1 = matrix(NA, 2, 2), remove.intercept = FALSE), sleepstudy, H = NA)
+
+# The first 10 time points the third and fouth state
+# defined with SSMregression correspond to the first subject, and next 10 time points
+# are related to second subject and so on.
+
+# need to use ordinary $ assignment as [ assignment operator for SSModel
+# object guards against dimension altering
+model_lmm$T <- array(model_lmm["T"], c(4, 4, 180))
+attr(model_lmm, "tv")[3] <- 1L #needs to be integer type!
+
+# "cut the connection" between the subjects
+times <- seq(10, 180, by = 10)
+model_lmm["T",states = 3:4, times = times] <- 0
+
+# for the first subject the variance of the random effect is defined via P1
+# for others, we use Q
+model_lmm["Q", times = times] <- NA
+
+    # data("GlobalTemp")
+    # inits <- chol(cov(GlobalTemp))[c(1, 4, 3)]
+    # inits[1:2] <- log(inits[1:2])
+
+update_lmm <- function(pars = init, model){
+  P1 <- diag(exp(pars[1:2]))
+  P1[1, 2] <- pars[3]
+  model["P1", states = 3:4] <- model["Q", times = times] <-
+    crossprod(P1)
+  model["H"] <- exp(pars[4])
+  model
+} 
+
+inits <- c(0, 0, 0, 3)
+
+fit_lmm <- fitSSM(model_lmm, inits, update_lmm, method = "BFGS")
+out_lmm <- KFS(fit_lmm$model)
+# unconditional covariance matrix of random effects
+fit_lmm$model["P1", states = 3:4]
+
+# conditional covariance matrix of random effects
+# same for each subject and time point due to model structure
+# these differ from the ones obtained from lmer as these are not conditioned
+# on the fixed effects
+out_lmm$V[3:4,3:4,1]
+
+```
+## End(Not run)
+
+
+
+
+
+
+
+#=======================================================================================================
+#=======================================================================================================
+
+
+
+
+
+```{r}
+
+
+```
+

@@ -1,0 +1,60 @@
+---
+title: "trybsts - Bayesian Structural time series (bsts) examples"
+subtitle: "Doesn't look like bsts supports the general sts specification based on matrices" 
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(bsts)
+```
+
+
+```{r}
+
+data(AirPassengers)
+y <- log(AirPassengers)
+ss <- AddLocalLinearTrend(list(), y)
+ss <- AddSeasonal(ss, y, nseasons = 4) # what if two seasonal cycles are included ?
+
+ss <- AddSeasonal(ss, y, nseasons = 12)
+
+ss <- AddSeasonal(ss, y, nseasons = 12)
+
+ss <- AddSeasonal(ss, y, nseasons = 12)
+
+ss <- AddSeasonal(ss, y, nseasons = 12) # what if two seasonal cycles are included ?
+
+StateSizes(ss)  # not clear how this works
+
+model <- bsts(y, state.specification = ss, niter = 300)
+
+summary(model, burn = 20)
+
+
+pred <- predict(model, horizon = 12, burn = 100)
+plot(pred)
+
+```
+
+
+```{r}
+y <- rnorm(1000)
+state.specification <- AddLocalLinearTrend(list(), y)
+ss1 <- state.specification 
+state.specification <- AddSeasonal(state.specification, y, 7)
+ss2 <- state.specification 
+
+identical(ss1, ss2)
+
+StateSizes(state.specification)
+```
+
+```{r}
+#ss0 <- ss 
+
+
+```
+
+
