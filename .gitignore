@@ -28,3 +28,4 @@ rsconnect/
 *.html
 *.rds
 linear_statespace_models_LecQuantEcon.ipynb
+my_results
