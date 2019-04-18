@@ -18,20 +18,20 @@ install_tensorflow(method = "conda")
 #use_condaenv("myenv")
 
 
-##
-devtools::install_github("rstudio/reticulate", force = TRUE)
+#devtools::install_github("rstudio/reticulate", force = TRUE)
 library(reticulate)
-reticulate::use_python("D:/Anaconda3/pkgs/python-2.7.15-he216670_0")
+reticulate::use_python("D:/Anaconda3/pkgs/python-3.7.3-h8c8aaf0_0")
 reticulate::py_config()
-#Sys.getenv("RETICULATE_PYTHON")
-Sys.setenv(RETICULATE_PYTHON = "D:/Anaconda3/pkgs/python-2.7.15-he216670_0")
-Sys.setenv(PYTHONHOME = "D:/Anaconda3/pkgs/python-2.7.15-he216670_0")
+Sys.getenv("RETICULATE_PYTHON")
+Sys.setenv(RETICULATE_PYTHON = "D:/Anaconda3/pkgs/python-3.7.3-h8c8aaf0_0")
+Sys.setenv(PYTHONHOME = "D:/Anaconda3/pkgs/python-3.7.3-h8c8aaf0_0")
 ##
 
 
-devtools::install_github("rstudio/keras", force = TRUE)
+devtools::install_github("rstudio/keras", force = TRUE)y
 library(keras)
-install_keras(conda = "D:/Anaconda3/Scripts/conda.exe")
+#install_keras(conda = "D:/Anaconda3/Scripts/conda.exe")
+
 #install.packages("kerasformula", force = TRUE)
 #devtools::install_github("rdrr1990/kerasformula")
 library(kerasformula)
