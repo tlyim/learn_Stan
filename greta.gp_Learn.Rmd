@@ -5,11 +5,27 @@ output: html_notebook
 
 
 ```{r}
+library(tensorflow)
 library(reticulate)
+#install_tensorflow(method = "conda")
+reticulate::py_config()
+# use_virtualenv("~/r-tensorflow")
+# use_condaenv("r-tensorflow")
+
+#reticulate::conda_install(envname = "r-tensorflow", "tensorflow-probability", pip = TRUE)
+#^ Cannot pass in the --user flag; 
+# can only use admin commmand prompt (or use --user), activate r-tensorflow, then pip [--user]
+# https://github.com/pypa/pip/issues/6068
+# https://github.com/coursera-dl/edx-dl/issues/469
+
+devtools::install_github('goldingn/greta.gp')
+#reticulate::conda_install(envname = "r-tensorflow", "gpflow", pip = TRUE)
+
+devtools::install_github('goldingn/gpflowr')
 gpflow <- import("gpflow")
 library(gpflowr)
-library (greta)
-library (greta.gp)
+library(greta)
+library(greta.gp)
 
 ```
 

@@ -6,13 +6,15 @@ output: html_notebook
 
 ```{r}
 
-install_tensorflow()
-install.packages(c("coda","mvtnorm","devtools","loo"))
+#install_tensorflow()
+
+#install.packages(c("coda","mvtnorm","devtools","loo"))
 #library(devtools)
 #devtools::install_github("rmcelreath/rethinking")
 library(rethinking)
-library(greta)
+library(greta) # must load before other packages to avoid potential conflicts in names
 library(DiagrammeR)
+library(igraph)
 library(bayesplot)
 library(dplyr)
 library(ggplot2)
@@ -25,7 +27,7 @@ Prepare data
 # Example from section 8.3 Statistical Rethinking
 
 data(rugged)
-# d <- rugged
+ d <- rugged
 # d$log_gdp <- log(d$rgdppc_2000)
 # dd <- d[complete.cases(d$rgdppc_2000), ]
 # dd_trim <- dd[ , c("log_gdp","rugged","cont_africa")]

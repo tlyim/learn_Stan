@@ -13,8 +13,9 @@ Compare the default dense model that ksm generates to the lstm model.
 library(tensorflow)   # install all of the Python dependencies using a built-in function
 #install_tensorflow(method = "conda")
 
-#use_virtualenv("~/myenv")
-#use_condaenv("myenv")
+
+use_virtualenv("~/r-tensorflow")
+use_condaenv("r-tensorflow")
 
 
 #devtools::install_github("rstudio/reticulate", force = TRUE)
@@ -33,7 +34,8 @@ Sys.setenv(PYTHONHOME = "C:/Users/TlYim/Anaconda3/pkgs/python-3.7.3-h8c8aaf0_0")
 
 #devtools::install_github("rstudio/keras", force = TRUE)y
 library(keras)
-#install_keras(conda = "D:/Anaconda3/Scripts/conda.exe")
+install_keras(conda = "D:/Anaconda3/Scripts/conda.exe")
+install_keras(conda = "C:/Users/TlYim/Anaconda3/Scripts/conda.exe")
 
 #install.packages("kerasformula", force = TRUE)
 #devtools::install_github("rdrr1990/kerasformula")
