@@ -10,8 +10,8 @@ output: html_notebook
 #library(tidyverse)
 
 library(MARSS)
-devtools::install_github("nwfsc-timeseries/atsar")
-library(atsar)
+#devtools::install_github("nwfsc-timeseries/atsar")
+#library(atsar)
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
 
@@ -23,18 +23,36 @@ options(mc.cores = parallel::detectCores())  #
 
 ```
 
-# Simulate data
+# Simulate data using MARSSsimulate()
 ```{r}
 
-
-
-
-
+d = harborSeal[,c(2,11)]
+dat = t(d)
+MLEobj = MARSS(dat)
+#simulate data that are the
+#same length as original data and no missing data
+sim.obj = MARSSsimulate(MLEobj, tSteps=dim(d)[1], nsim=5)
+#simulate data that are the
+#same length as original data and have missing data in the same location
+sim.obj = MARSSsimulate(MLEobj, tSteps=dim(d)[1], nsim=5, miss.loc=dat)
 
 
 ```
 
+Define a MARSS model (form="marxss")
+```{r}
 
+B1=matrix(list("b",0,0,"b"),2,2)
+U1=matrix(0,2,1)
+Q1=matrix(c("q11","q12","q12","q22"),2,2)
+Z1=matrix(c(1,0,1,1,1,0),3,2)
+A1=matrix(list("a1",0,0),3,1)
+R1=matrix(list("r11",0,0,0,"r",0,0,0,"r"),3,3)
+pi1=matrix(0,2,1); V1=diag(1,2)
+model.list=list(B=B1,U=U1,Q=Q1,Z=Z1,A=A1,R=R1,x0=pi1,V0=V1,tinitx=0)
+
+
+```
 
 
 
