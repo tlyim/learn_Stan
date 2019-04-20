@@ -24,7 +24,6 @@ options(mc.cores = parallel::detectCores())  #
 ```
 
 
-
 # Estimate the simulated model with Stan - misreporting extent 
   (forecasts specified in generated quantities block)
 //ignore these lines: 
@@ -73,7 +72,7 @@ model {
   y[2:N] ~ normal(a + b * y[1:(N - 1)], sd_y);
   
 // c ~ cauchy(0, 2.5); // common prior for each b[K]
-  m ~ normal(X*c, sd_m);
+  m ~ normal(X*c, sd_m);  // shouldn't good governance restrict |m| or m^2 ? Then impact of X is on sd_m
 //  M ~ bernoulli_logit(ilogodds); 
 
 }
@@ -105,18 +104,19 @@ model {}
 generated quantities {
   vector[N] y; // underlying unbiased figures  
   vector[N] m; // misreporting extent in the reported figures 
-  vector[N] r; // reported figures (scaled by Rev, total revenue)
+//  vector[N] r; // reported figures (scaled by Rev, total revenue)
 
-  y[1] = normal_rng(a/(1-b), sd_y);
+  y[1] = normal_rng(a/(1-b), sd_y);   // y should be nonnegative for Rev and nonpositive for Costs
+// Perhaps best to model y as always positive, with IsCost = 1, 0 to indicate Cost or Rev item 
 //  y[2:N] = normal_rng(a + b * y[1:(N - 1)], sd_y);
 //  m = normal_rng(X*c, sd_m);
 //  r = y + m; 
   m[1] = normal_rng(X[1]*c, sd_m); 
-  r[1] = y[1] + m[1];
+//  r[1] = y[1] + m[1];     // should be more efficient to use R to create r from y, m
   for (n in 2:N) {
     y[n] = normal_rng(a + b * y[n-1], sd_y);
     m[n] = normal_rng(X[n]*c, sd_m); 
-    r[n] = y[n] + m[n];
+//    r[n] = y[n] + m[n];
   }
 }
 ```
