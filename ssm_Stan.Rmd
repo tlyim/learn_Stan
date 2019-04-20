@@ -1,5 +1,5 @@
 ---
-title: "Structural time series - Stan model"
+title: "State space model of accounting manipulation - Stan"
 output: html_notebook
 ---
 
