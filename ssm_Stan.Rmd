@@ -5,9 +5,9 @@ output: html_notebook
 
 ```{r}
 
-#library(magrittr)
-#library(dplyr)
 #library(tidyverse)
+#library(dplyr)
+#library(magrittr)
 
 #load previously saved Stan model objects
 #load(file = "StanObjects.rda")
@@ -32,7 +32,7 @@ options(mc.cores = parallel::detectCores())  #
 
 ```{stan output.var=SSM, eval=T}
 // Focus on the time series of only one firm
-// The observations are reported accounting figures, say COGS, (scaled by Rev, total revenue) a vector r of length N (years).
+// The observations are reported accounting figures, say Gross Profit, (scaled by Rev, total revenue) a vector r of length N (years).
 // The covariates are a matrix capital X with K column vectors, incl a unit vector, capturing the  
 //   dis/incentives of misreporting the underlying unbiased figures (y) as the observed reported firgures
 data {
@@ -46,12 +46,13 @@ data {
 //  matrix[N_new,K] X_new; // 
 }
 transformed data {
+  real <lower=0,upper=1> a = 0; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
 // GP data
 }
 parameters {
-  vector[N] y; // underlying unbiased figures (scaled by Rev, total revenue)
-  real a; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
-  real b; // slope coefficient of the AR(1) process of y[n]
+  vector[N] y; // underlying unbiased figure (scaled by Rev, total revenue)
+//  real <lower=0,upper=1> a; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+  real <lower=0,upper=1> b; // slope coefficient of the AR(1) process of y[n]
   vector[K] c; // coefficients of the K covariates in matrix X
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
   real<lower=0> sd_m; // sd of the misreporting extents (vector m = r - y)
@@ -92,17 +93,19 @@ data {
   int<lower=0> K; // number of coefficents for the column vectors in covariate matrix X
   matrix[N,K] X; // covariates (capturing the dis/incentives of misreporting)
 
-  real a; // intercept coefficient (drift) of the AR(1) process of the underlying unbiased accounting figure y[n]
+//  real a; // intercept coefficient (drift) of the AR(1) process of the underlying unbiased accounting figure y[n]
   real b; // slope coefficient of the AR(1) process of y[n]
   vector[K] c; // coefficients of the K covariates in matrix X
   real<lower=0> sd_y; // sd of the underlying unbiased figure (vector y)
   real<lower=0> sd_m; // sd of the misreporting extent (vector m = r - y)
 }
-transformed data {}
+transformed data {
+  real a = 0;
+}
 parameters {}
 model {}
 generated quantities {
-  vector[N] y; // underlying unbiased figures  
+  vector[N] y; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
   vector[N] m; // misreporting extent in the reported figures 
 //  vector[N] r; // reported figures (scaled by Rev, total revenue)
 
@@ -122,81 +125,69 @@ generated quantities {
 ```
 
 
-```{r}
-
-```
-
-
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-N = 99*5#4 + 50  #9999
+N = 16*7  # number of (yearly) observations of a firm
 
-#set.seed(88)  # set the seed for random generation to ensure replicability
+sd_y = 0.02  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
+sd_m = 0.01  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 
-# Z matrix is composed of the columns of earnings components
-Z <- matrix(data = c(rep(1, N), rnorm(N), rnorm(N), rnorm(N)), 
+a = 0#.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+b = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
+#set parameters of the data generation process of the misreporting extent m
+c = c(-0.07, 0.2)
+#c = c(0.1, -0.07, 0.2)
+K = length(c)
+cvec <- matrix(data = c, nrow = K)  # define column vector as a matrix[N,1]
+
+integrity = 0.8       
+# integrity level, between (0,1), of the society, interpreted as likelihood to behave opportunistically
+# integrity level of an individual, indiv_integ between (-Inf,Inf), is 
+#   affected by a society's general integrity level in a stochastic fashion varying from period to period
+
+#M <- rbinom(N, 1, integrity)   # the decision to misreport earnings
+
+#set.seed(88)  # set the seed for rng to ensure replicability
+# covariate matrix X capturing the dis/incentive to misreport
+X <- matrix(data = c(#rep(1, N), 
+                     rnorm(N, integrity, 0.3), rbinom(N, 1, 0.3)),
             nrow = N)
-colnames(Z) <- c("Rev2Rev", "COGS2Rev", "SGA2Rev", "RnD2Rev")
+colnames(X) <- c(#"constant", 
+                 "indiv_integ", "downgrade")  
+# downgrade = 1 if one or more analysts following the firm downgraded their stock recommendation in the last period
+#colnames(Z) <- c("Rev2Rev", "COGS2Rev", "SGA2Rev", "RnD2Rev")
 
-#set actual parameters of the data generation process of the reported earnings (to total revenue ratio) 
-a = c(0.9, -0.4, -0.2, -0.05)
-avec <- matrix(data = a, nrow = length(a))  # define column vector as a matrix[N,1]
-
-# Simulate the earnings based on a linear model (Later, this model will be estimated with observed data)
-sd_r = 0.15
-r <- rnorm(N, mean = (Z %*% avec), sd = sd_r)  # reported company earnings, scaled by Rev, total revenue)
-
-mod_OLS <- lm(r ~ . + 0, data = data.frame(r, Z))  # + 0 to remove intercept as Rev2Rev is the unit vector for intercept
-summary(mod_OLS)
-
-integrity = 0.8       # integrity level of the society, interpreted as likelihood to behave opportunistically
-M <- rbinom(N, 1, integrity)   # the decision to misreport earnings
-
-
-# Simulate GP data
-rho_T <- 5.5   # set true parameters for the exponential kernel of the GP
-alpha_T <- 3
-sigma_T <- 2
-
-g = 1 # approx. about g times of N
-G_total = g*(N+1) + 1
-t_total <- 20 * (0:(G_total - 1)) / (G_total - 1) - 10   # rescale the range of z to [-10,10]
-
-sim_GP_data <- list(rho=rho_T, 
-                  alpha=alpha_T, 
-                  sigma=sigma_T, 
-                  N=G_total, 
-                  x=t_total)
-
-simu_fit <- stan(model_code = simu_GP@model_code, data=sim_GP_data, iter=1, 
-            chains=1, algorithm="Fixed_param")  #seed=987,  
+simu_SSM_data <- list(N = N, 
+                      K = K,
+                      X = X,
+                      a = a,
+                      b = b, 
+                      c = c,
+                      sd_y = sd_y,
+                      sd_m = sd_m
+                      )
+save(simu_SSM_data, file="simu_SSM_data.rda")
+load(file="simu_SSM_data.rda")
+# Simulate SSM data
+simu_fit <- stan(model_code = simu_SSM@model_code, data=simu_SSM_data, iter=1, #seed=987,  
+            chains=1, algorithm="Fixed_param")  
                       
+y <- extract(simu_fit)$y[1,]
+m <- extract(simu_fit)$m[1,]
+r <- y + m
 
-m_total <- extract(simu_fit)$y[1,]  # misreporting extent = the sample y of from the true realization GP f
-# true_realization <- data.frame(f_total = extract(simu_fit)$f[1,], 
-#                                t_total = t_total)
-observed_t <- c(g*(1:N))  # Get N observed points evenly over the range [-10,10]
-t <- t_total[observed_t]     
-m <- m_total[observed_t]
-
-
-# Prepare simulated earnings management (EM) data for estimation using MCMC
-N_new = 3
-sim_EM_data <- list(N = N, 
-                 K = length(a),
+# Prepare SSM data for estimation using MCMC
+#N_new = 3
+SSM_data <- list(N = N, 
+                 K = K,
                  r = r, 
-                 Z = Z,
-                 M = M,
-                 G = N,
-                 t = t,
-                 m = m,
-                 Z_new = Z[1:N_new,],
-                 N_new = N_new
+                 X = X
+                 # Z_new = Z[1:N_new,],
+                 # N_new = N_new
                  )
-
 # Fit the debug model to make sure the Stan code complies properly 
-fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter = 10, chains = 1)
+#fit0_debug <- stan(model_code = SSM@model_code, data = SSM_data, iter = 10, chains = 1)
 
 #save(simu_GP, misreport, file = "StanObjects.rda")
 #load(file = "StanObjects.rda")
@@ -209,19 +200,24 @@ fit0_debug <- stan(model_code = misreport@model_code, data = sim_EM_data, iter =
 system.time({
 fit1 <- stan( 
 #  file = "misreport.stan",  # Stan program
-  data = sim_EM_data,    # named list of data
-  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.90),    # adjust when there're divergent transitions after warmup
+  data = SSM_data,    # named list of data
+  model_code = SSM@model_code, 
+#  fit = fit0_debug,   # to save compilation time if the debug model was run
+  control = list(adapt_delta = 0.999, max_treedepth = 11),    # adjust when there're divergent transitions after warmup
 #  chains = 1,             # default is 4 Markov chains
 #  cores = 8,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
 #  seed = 555,
-  iter = 300, #500 #2000,            # total number of iterations per chain
-#  warmup = 1000,          # number of warmup iterations per chain
-  refresh = 100#0          # = 0 means no progress shown
+  iter = 9000, #500 #2000,            # total number of iterations per chain
+  warmup = 7000,          # number of warmup iterations per chain
+  refresh = 1000#0          # = 0 means no progress shown
   )
 })
+
+
+#extract(fit1)$y[1,]
+#pairs(extract(fit1), pars = c(a, b)) #, y[1], sd_y, m[1], sd_m, c[1], c[2], c[3]))
 
 ```
 
