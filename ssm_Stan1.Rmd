@@ -31,110 +31,26 @@ options(mc.cores = parallel::detectCores())  #
 //   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
 
 ```{stan output.var=SSM, eval=T}
-// Focus on the time series of only one firm
-// The observations are reported accounting figures, say Gross Profit, (scaled by Rev, total revenue) a vector r of length N (years).
-// The covariates are a matrix capital X with K column vectors, incl a unit vector, capturing the  
-//   dis/incentives of misreporting the underlying unbiased figures (y) as the observed reported firgures
-data {
-  int<lower=0> N; // number of observations (for different years)
-  int<lower=0> K; // number of coefficents for the column vectors in covariate matrix X
-  vector[N] r; // reported figures (scaled by Rev, total revenue)
-  matrix[N,K] X; // covariates (capturing the dis/incentives of misreporting)
 
-// forecasts  
-//  int<lower=0> N_new; // number of predictions
-//  matrix[N_new,K] X_new; // 
-}
-transformed data {
-//  real <lower=0,upper=1> a = 0; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
-// GP data
-}
-parameters {
-  vector[N] y; // underlying unbiased figure (scaled by Rev, total revenue)
-  real <lower=0,upper=1> a; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
-  real <lower=0,upper=1> b; // slope coefficient of the AR(1) process of y[n]
-  vector[K] c; // coefficients of the K covariates in matrix X
-  real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
-  real<lower=0> sd_m; // sd of the misreporting extents (vector m = r - y)
-// real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
-//  vector[N] integrity;     // integrity level of each CEO affecting the decision to misreport or not
-}
-transformed parameters {
-//  vector[N] m; // misreporting extent in the reported figures 
-  vector[N] m = r - y;
-
-//  real ilogodds;     // log odds of the society integrity level
-//  ilogodds = logit(integrity);   
-}
-model {
-
-  y[1] ~ normal(a/(1-b), sd_y);   // y should be nonnegative for Rev and nonpositive for Costs
-//  for (n in 2:N)
-//    y[n] ~ normal(alpha + beta * y[n-1], sigma);
-  y[2:N] ~ normal(a + b * y[1:(N - 1)], sd_y);
-  
-// c ~ cauchy(0, 2.5); // common prior for each b[K]
-  m ~ normal(X*c, sd_m);  // shouldn't good governance restrict |m| or m^2 ? Then impact of X is on sd_m
-//  M ~ bernoulli_logit(ilogodds); 
-
-}
-generated quantities {
-
-//  vector[N_new] r_new;
-//  for (n in 1:N_new)
-//    r_new[n] = normal_rng(Z_new[n] * b, sd_r);
-}
 
 ```
 
 # Simulate data
 ```{stan output.var=simu_SSM, eval=T}
-data {
-  int<lower=0> N; // number of observations (for different years)
-  int<lower=0> K; // number of coefficents for the column vectors in covariate matrix X
-  matrix[N,K] X; // covariates (capturing the dis/incentives of misreporting)
 
-  real a; // intercept coefficient (drift) of the AR(1) process of the underlying unbiased accounting figure y[n]
-  real b; // slope coefficient of the AR(1) process of y[n]
-  vector[K] c; // coefficients of the K covariates in matrix X
-  real<lower=0> sd_y; // sd of the underlying unbiased figure (vector y)
-  real<lower=0> sd_m; // sd of the misreporting extent (vector m = r - y)
-}
-transformed data {
-//  real a = 0;
-}
-parameters {}
-model {}
-generated quantities {
-  vector[N] y; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
-  vector[N] m; // misreporting extent in the reported figures 
-//  vector[N] r; // reported figures (scaled by Rev, total revenue)
 
-  y[1] = normal_rng(a/(1-b), sd_y);   // y should be nonnegative for Rev and nonpositive for Costs
-// Perhaps best to model y as always positive, with IsCost = 1, 0 to indicate Cost or Rev item 
-//  y[2:N] = normal_rng(a + b * y[1:(N - 1)], sd_y);
-//  m = normal_rng(X*c, sd_m);
-//  r = y + m; 
-  m[1] = normal_rng(X[1]*c, sd_m); 
-//  r[1] = y[1] + m[1];     // should be more efficient to use R to create r from y, m
-  for (n in 2:N) {
-    y[n] = a + normal_rng(b * y[n-1], sd_y);
-    m[n] = normal_rng(X[n]*c, sd_m); 
-//    r[n] = y[n] + m[n];
-  }
-}
 ```
 
 
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-N = 16*5  #7 number of (yearly) observations of a firm
+N = 16*4  #7 number of (yearly) observations of a firm
 
 sd_y = 0.02  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
 sd_m = 0.01  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 
-a = 0#.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+a = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
 b = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
 #set parameters of the data generation process of the misreporting extent m
 c = c(-0.07, 0.2)
@@ -143,7 +59,7 @@ K = length(c)
 cvec <- matrix(data = c, nrow = K)  # define column vector as a matrix[N,1]
 d = 1 # fractional reversal of prior-period manipluation by accruals
 
-integrity = 0.8       
+integrity = 0 #0.8       
 # integrity level, between (0,1), of the society, interpreted as likelihood to behave opportunistically
 # integrity level of an individual, indiv_integ between (-Inf,Inf), is 
 #   affected by a society's general integrity level in a stochastic fashion varying from period to period
@@ -169,8 +85,9 @@ simu_SSM_data <- list(N = N,
                       sd_y = sd_y,
                       sd_m = sd_m
                       )
-save(simu_SSM_data, file="simu_SSM_data.rda")
-load(file="simu_SSM_data.rda")
+# save(simu_SSM_data, file="simu_SSM_data.rda")
+# load(file="simu_SSM_data.rda")
+
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
                  file = "simu_SSM.stan",  # Stan program
@@ -209,14 +126,14 @@ fit1 <- stan(
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.999, max_treedepth = 12),    # adjust when there're divergent transitions after warmup
+  control = list(adapt_delta = 0.99, max_treedepth = 11),    # adjust when there're divergent transitions after warmup
 #  chains = 1,             # default is 4 Markov chains
 #  cores = 8,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
 #  seed = 555,
   iter = 9000, #500 #2000,            # total number of iterations per chain
-  warmup = 7000,          # number of warmup iterations per chain
+  warmup = 2000,          # number of warmup iterations per chain
   refresh = 1000#0          # = 0 means no progress shown
   )
 })
@@ -234,8 +151,8 @@ ss_complete_pool <- extract(fit1);
 # rho_T <- 5.5, alpha_T <- 3, sigma_T <- 2
 print(fit1, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 
-source('stan_utility.R')
-check_all_diagnostics(fit1)
+# source('stan_utility.R')
+# check_all_diagnostics(fit1)
 
 ```
 
