@@ -21,7 +21,8 @@ parameters {
   real <lower=0,upper=1> a; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real <lower=0,upper=1> b; // slope coefficient of the AR(1) process of y[n]
   vector[K] c; // coefficients of the K covariates in matrix X
-  real <lower=0,upper=1> d; // fractional reversal of prior-period manipluation by accruals
+  simplex[3] d; // fractional reversal of prior-period manipluation by accruals
+//  real <lower=0,upper=1> d; // fractional reversal of prior-period manipluation by accruals
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
   real<lower=0> sd_m; // sd of the misreporting extents (vector m = r - y)
 //  vector[N] err_y; // underlying unbiased figure (scaled by Rev, total revenue)
@@ -36,8 +37,10 @@ transformed parameters {
   
   m = X*c + err_m;
   D[1] = m[1];
-  for (n in 2:N) 
-    D[n] = m[n] - d * m[n-1];     // if estimated d < 1, this'd suggest taking more than one-period to reverse
+  D[2] = m[2] - d[1]*m[1];     
+  D[3] = m[3] - d[1]*m[2] - d[2]*m[1];     
+  for (n in 4:N) 
+    D[n] = m[n] - d[1]*m[n-1] - d[2]*m[n-2] - d[3]*m[n-3];     // if estimated d < 1, this'd suggest taking more than one-period to reverse
   y[1] = ( a/(1-b) + (r[1] - D[1]) )/2;  
 //  y[1] = a/(1-b) + err_y[1];  
   for (n in 2:N) {

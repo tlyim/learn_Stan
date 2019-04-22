@@ -6,7 +6,7 @@ output: html_notebook
 ```{r}
 
 #library(tidyverse)
-#library(dplyr)
+library(dplyr)
 library(magrittr)
 
 #load previously saved Stan model objects
@@ -45,7 +45,7 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-N = 16*4  #7 number of (yearly) observations of a firm
+N = 16*4 #7 number of (yearly) observations of a firm
 
 sd_y = 0.02  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
 sd_m = 0.01  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
@@ -57,7 +57,7 @@ c = c(-0.07, 0.2)
 #c = c(0.1, -0.07, 0.2)
 K = length(c)
 cvec <- matrix(data = c, nrow = K)  # define column vector as a matrix[N,1]
-d = 1 # fractional reversal of prior-period manipluation by accruals
+d = c(0.6, 0.3, 0.1) # fractional reversal of prior-period manipluation by accruals
 
 integrity = 0 #0.8       
 # integrity level, between (0,1), of the society, interpreted as likelihood to behave opportunistically
@@ -96,8 +96,12 @@ simu_fit <- stan(#model_code = simu_SSM@model_code,
 
 y <- extract(simu_fit)$y[1,]
 m <- extract(simu_fit)$m[1,]
-D <- m - d * dplyr::lag(m)
-D[1] <- m[1]
+
+D <- m - d[1]*lag(m) - d[2]*lag(m,2L) - d[3]*lag(m,3L)
+D[1] = m[1]
+D[2] = m[2] - d[1]*m[1]     
+D[3] = m[3] - d[1]*m[2] - d[2]*m[1]    
+
 r <- y + D
 
 # Prepare SSM data for estimation using MCMC
@@ -126,13 +130,13 @@ fit1 <- stan(
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.99, max_treedepth = 11),    # adjust when there're divergent transitions after warmup
+  control = list(adapt_delta = 0.99, max_treedepth = 12),    # adjust when there're divergent transitions after warmup
 #  chains = 1,             # default is 4 Markov chains
 #  cores = 8,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
 #  seed = 555,
-  iter = 9000, #500 #2000,            # total number of iterations per chain
+  iter = 9000,#12000, #500 #2000,            # total number of iterations per chain
   warmup = 2000,          # number of warmup iterations per chain
   refresh = 1000#0          # = 0 means no progress shown
   )
