@@ -31,14 +31,10 @@ options(mc.cores = parallel::detectCores())  #
 //   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
 
 ```{stan output.var=SSM, eval=F}
-
-
 ```
 
 # Simulate data
 ```{stan output.var=simu_SSM, eval=F}
-
-
 ```
 
 
@@ -54,13 +50,13 @@ sd_gamma = 0.02
 sd_y = 0.04  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
 sd_m = 0.02  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 
-a = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
-b = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
+alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
 #set parameters of the data generation process of the misreporting extent m
-c = c(-0.07, 0.2)
+g =c(-0.07, 0.2)
 #c = c(0.1, -0.07, 0.2)
-K = length(c)
-cvec <- matrix(data = c, nrow = K)  # define column vector as a matrix[N,1]
+K = length(g)
+cvec <- matrix(data = g, nrow = K)  # define column vector as a matrix[N,1]
 d = c(0.6, 0.3, 0.1) # fractional reversal of prior-period manipluation by accruals
 L = length(d)
 
@@ -99,9 +95,9 @@ simu_SSM_data <- list(J = J,
                       N = N, 
                       K = K,
                       X = X.l,
-                      a = a,
-                      b = b, 
-                      c = c,
+                      alpha = alpha,
+                      beta = beta, 
+                      g = g,
                       sd_gamma = sd_gamma,
                       sd_y = sd_y,
                       sd_m = sd_m
@@ -143,9 +139,9 @@ SSM_data <- list(J = J,
                  sd_gamma_init = sd_gamma,
                  sd_y_init = sd_y,
                  sd_m_init = sd_m,
-                 a_init = a,
-                 b_init = b,
-                 c_init = c,
+                 alpha_init = alpha,
+                 beta_init = beta,
+                 g_init = g,
 #                 sd_c_init = sd_c_init,
                  r = r.l, 
                  X = X.l
