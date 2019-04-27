@@ -13,7 +13,7 @@ data {
   real alpha_init; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real beta_init; // slope coefficient of the AR(1) process of y[n]
   vector[K] g_init;
-#  real<lower=0> sd_c_init;
+//  real<lower=0> sd_c_init;
   vector[N] r[J]; // reported figures (scaled by Rev, total revenue)
   matrix[N,K] X[J]; // covariates (capturing the dis/incentives of misreporting)
 
@@ -33,11 +33,12 @@ parameters {
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 //  real <lower=0,upper=1> d; // fractional reversal of prior-period manipluation by accruals
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
-  real<lower=0> sd_m; // sd of the misreporting extents (vector m = r - y)
+//  real<lower=0> sd_m; // sd of the misreporting extents (vector m = r - y)
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
   vector[K] err_gamma[J];
+//  vector[N] err_m[J]; // underlying unbiased figure (scaled by Rev, total revenue)
 //  vector[N] err_y; // underlying unbiased figure (scaled by Rev, total revenue)
-  vector[N] err_m[J]; // underlying unbiased figure (scaled by Rev, total revenue)
+
 // real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
 //  vector[N] integrity;     // integrity level of each CEO affecting the decision to misreport or not
 }
@@ -49,7 +50,7 @@ transformed parameters {
   for (j in 1:J) {  
 
 // shouldn't good governance restrict |m| or m^2 ? Then impact of X is on sd_m
-    m[j] = X[j]*(g + sd_gamma*err_gamma[j]) + sd_m*err_m[j];
+    m[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // + sd_m*err_m[j];
 
 
     D[j,1] = m[j,1];
@@ -77,17 +78,19 @@ model {
 //  vector[N] m; // misreporting extent in the reported figures 
 
 // priors 
-	sd_gamma ~ inv_gamma(2, sd_gamma_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+//	sd_m ~ inv_gamma(2, sd_m_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_y ~ inv_gamma(2, sd_y_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
-	sd_m ~ inv_gamma(2, sd_m_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
-  alpha ~ normal(alpha_init, 1);
-  beta ~ beta(5*beta_init, 5*(1-beta_init));
-  g ~ normal(g_init, 1);
+	sd_gamma ~ inv_gamma(2, sd_gamma_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+  alpha ~ normal(alpha_init, 0.5);
+  beta ~ beta(2*beta_init, 2*(1-beta_init));
+//  g ~ normal(g_init, 1);
+  g ~ normal(g_init, 0.2);
+//  d ~ uniform(-1, 1);
   
   for (j in 1:J) { 
 
+//    err_m[j] ~ normal(0, 1);   // y should be nonnegative for Rev and nonpositive for Costs
     err_gamma[j] ~ normal(0, 1);
-    err_m[j] ~ normal(0, 1);   // y should be nonnegative for Rev and nonpositive for Costs
 
     y[j,2:N] ~ normal(alpha + beta * y[j,1:(N - 1)], sd_y);
 

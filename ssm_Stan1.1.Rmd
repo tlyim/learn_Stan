@@ -41,26 +41,26 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-J = 3#00#50    # number of firms
+J = 15#00#50    # number of firms
 N = 16*2#2 #4 #7 number of (yearly) observations of a firm
 
 
 #sd_c_init = 0.1  #0.01
 sd_gamma = 0.02
-sd_y = 0.04  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
-sd_m = 0.02  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
+sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
+#sd_m = 0.02  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 
 alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
 beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
 #set parameters of the data generation process of the misreporting extent m
-g =c(-0.07, 0.2)
-#c = c(0.1, -0.07, 0.2)
+#g =c(-0.07, 0.2)
+g = c(0.05, -0.1, 0.2)
 K = length(g)
 cvec <- matrix(data = g, nrow = K)  # define column vector as a matrix[N,1]
 d = c(0.6, 0.3, 0.1) # fractional reversal of prior-period manipluation by accruals
 L = length(d)
 
-integrity = 0 #0.8       
+integrity = 0.5 #(0,1)  0.5 = average       
 # integrity level, between (0,1), of the society, interpreted as likelihood to behave opportunistically
 # integrity level of an individual, indiv_integ between (-Inf,Inf), is 
 #   affected by a society's general integrity level in a stochastic fashion varying from period to period
@@ -78,8 +78,8 @@ integrity = 0 #0.8
     #                  "indiv_integ", "downgrade")  
 
 X.l <- data.frame(gvkey = rep(1:J,N),                   
-                  #constant = rep(1, J*N),
-                  indiv_integ = rnorm(J*N, integrity, 0.3), 
+                  constant = rep(1, J*N),
+                  indiv_integ = runif(J*N, 2*integrity), 
                   downgrade = rbinom(J*N, 1, 0.3)
                   ) %>% 
   arrange(gvkey) %>% 
@@ -160,7 +160,7 @@ SSM_data <- list(J = J,
 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({
-fit1 <- stan( 
+fit1 <- stan(
   file = "SSM1.1.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
@@ -172,11 +172,11 @@ fit1 <- stan(
 #  cores = 8,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
-#  seed = 555,
+#  seed = 555, 
 
-  iter = 4000,#7000,#12000, #500 #2000,            # total number of iterations per chain
+  iter = 3000,#4000,#7000,#12000, #500 #2000,            # total number of iterations per chain
   warmup = 1000,#500,          # number of warmup iterations per chain
-  refresh = 1000#0          # = 0 means no progress shown
+  refresh = 500#1000#0          # = 0 means no progress shown
   )
 })
 
