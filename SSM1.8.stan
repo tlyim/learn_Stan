@@ -16,6 +16,9 @@ data {
   real beta_init; // slope coefficient of the AR(1) process of y[n]
   vector[K] g_init;
   vector[H] w_init;//  real<lower=0> sd_c_init;
+
+vector[N] temp[J];  // for debugging only
+
   vector[N] r[J]; // reported figures (scaled by Rev, total revenue)
   matrix[N,K] X[J]; // covariates (capturing the dis/incentives of misreporting)
   matrix[N,H] G[J]; // covariates (capturing the strength of internal governance and external monitoring mechansims)
@@ -51,6 +54,7 @@ transformed parameters {
   vector[N] y[J];
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] D[J];
+vector[N] temp0[J];  // for debugging only
 
   for (j in 1:J) {  
     vector[N] tau[J]; // temptation to misreport
@@ -62,7 +66,9 @@ transformed parameters {
     tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
     b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
 
-    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
+//    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
+    P[j] = rep_vector(2, N);//*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
+temp0[j] = G[j]*(w + sd_omega*err_omega[j]);  // for debugging only
 
     m[j] = b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
 
@@ -99,15 +105,18 @@ model {
   alpha ~ normal(alpha_init, 0.5);
   beta ~ beta(2*beta_init, 2*(1-beta_init));
   g ~ normal(g_init, 0.2);
-  w ~ normal(w_init, 0.2);#1);
+  w ~ normal(w_init, 0.2); //1);
   
-  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
+//  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
   //  d ~ uniform(-1, 1);
   
   for (j in 1:J) { 
 
     err_gamma[j] ~ normal(0, 1);
     err_omega[j] ~ normal(0, 1);
+temp[j] ~ normal(temp0[j], 1);   // for debugging only
+
+
     y[j,2:N] ~ normal(alpha + beta * y[j,1:(N - 1)], sd_y);
 
   }

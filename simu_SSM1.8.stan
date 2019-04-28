@@ -23,10 +23,9 @@ model {}
 generated quantities {
   vector[N] y[J]; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
   vector[N] m[J]; // misreporting extent in the reported figures 
-//  vector[K] err_gamma[J];
   vector[N] b[J]; //<lower=-1,upper=1> bias effort driven by the temptation to misreport
   vector[N] P[J];  //<lower=0> potential room of manipulation constrained by governance mechanisms
-
+vector[N] temp[J];  // for debugging only
 
   for (j in 1:J) {
     vector[K] err_gamma[J];
@@ -42,7 +41,10 @@ generated quantities {
 
     tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
     b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
-    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
+//    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
+//    P[j] = 1 ./ square( G[j]*(w + sd_omega*err_omega[j]) );
+    P[j] = rep_vector(2, N);//*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
+temp[j] = G[j]*(w + sd_omega*err_omega[j]) + normal_rng(0,1); // for debugging only
 
 //    m[j,1] = normal_rng(X[j,1]*gamma[j], sd_m);
 //    m[j,1] = X[j,1]*gamma[j];
