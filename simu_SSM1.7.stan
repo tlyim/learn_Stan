@@ -29,38 +29,31 @@ generated quantities {
 
   for (j in 1:J) {
     vector[K] err_gamma[J];
-    vector[N] P[J];  //<lower=0> potential room of manipulation constrained by governance mechanisms
+    vector[H] err_omega[J];
     vector[N] tau[J]; // temptation to misreport
     vector[N] b[J]; //<lower=-1,upper=1> bias effort driven by the temptation to misreport
+    vector[N] P[J];  //<lower=0> potential room of manipulation constrained by governance mechanisms
     
     for (k in 1:K) {
       err_gamma[j,k] = normal_rng(0, 1);
-    }
-    
-    for (n in 1:N){
+      }
+    for (h in 1:H) {
+      err_omega[j,h] = normal_rng(0, 1);
+      }
 
-//      P[j,n] = exp(2); 
-      P[j,n] = exp( G[j,n]*w ); 
-//      P[j,n] = exp( G[j,n]*(g + sd_omega*err_omega[j]) );
-
-// shouldn't good governance restrict |m| or m^2 ? Then impact of X is on sd_m
-//    m[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // + sd_m*err_m[j];
-      tau[j,n] = X[j,n]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
-    }
-
+    tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
     b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
+    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
 
 //    m[j,1] = normal_rng(X[j,1]*gamma[j], sd_m);
 //    m[j,1] = X[j,1]*gamma[j];
-    m[j,1] = b[j,1] .* P[j,1];  // extent of misreporting resulting from bias effort and 
+    m[j] = b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
+//    m[j,1] = b[j,1] .* P[j,1];  // extent of misreporting resulting from bias effort and 
     
     y[j,1] = normal_rng(alpha/(1-beta), sd_y);   // y should be nonnegative for Rev and nonpositive for Costs
 // Perhaps best to model y as always positive, with IsCost = 1, 0 to indicate Cost or Rev item 
     for (n in 2:N) {
-//      m[j,n] = normal_rng(X[j,n]*gamma[j], sd_m);
-//      m[j,n] = X[j,n]*gamma[j];
-      m[j,n] = b[j,n] .* P[j,n];  // extent of misreporting resulting from bias effort and 
-
+//      m[j,n] = b[j,n] .* P[j,n];  // extent of misreporting resulting from bias effort and 
       y[j,n] = alpha + normal_rng(beta*y[j,n-1], sd_y);
     }
   }
