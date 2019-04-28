@@ -1,9 +1,9 @@
----
-title: "State space model of accounting manipulation - Stan"
-output: html_notebook
----
-
-```{r}
+#' ---
+#' title: "State space model of accounting manipulation - Stan"
+#' output: html_notebook
+#' ---
+#' 
+## ------------------------------------------------------------------------
 
 #knitr::purl("ssm_Stan1.8.Rmd", output = "ssm_Stan1.8.R", documentation = 2)
 
@@ -23,26 +23,24 @@ options(mc.cores = parallel::detectCores())  #
 # The following throws an error in compiling .stan
 #Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
 
-```
 
-
-# Estimate the simulated model with Stan - misreporting extent 
-  (forecasts specified in generated quantities block)
-//ignore these lines: 
-//  COGS2Rev, SGA2Rev, RnD2Rev with Rev2Rev = unit vector as the intercept)
-//   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
-
-```{stan output.var=SSM, eval=F}
-```
-
-# Simulate data
-```{stan output.var=simu_SSM, eval=F}
-```
-
-
-
-# Simulate data and fit the debug model (also, save Stan model objects) 
-```{r}
+#' 
+#' 
+#' # Estimate the simulated model with Stan - misreporting extent 
+#'   (forecasts specified in generated quantities block)
+#' //ignore these lines: 
+#' //  COGS2Rev, SGA2Rev, RnD2Rev with Rev2Rev = unit vector as the intercept)
+#' //   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
+#' 
+## NA
+#' 
+#' # Simulate data
+## NA
+#' 
+#' 
+#' 
+#' # Simulate data and fit the debug model (also, save Stan model objects) 
+## ------------------------------------------------------------------------
 
 J = 100#15 #00#50    # number of firms
 N = 16*4#4#2 #4 #7 number of (yearly) observations of a firm
@@ -191,10 +189,10 @@ temp = temp.l,  #   // for debugging only
 
 #save(simu_GP, misreport, file = "StanObjects.rda")
 #load(file = "StanObjects.rda")
-```
 
-# Fit the full model (by referring to the debug model) to estimate underlying parameters
-```{r}
+#' 
+#' # Fit the full model (by referring to the debug model) to estimate underlying parameters
+## ------------------------------------------------------------------------
 
 n_iter = 4000
 n_warmup = 1500
@@ -227,10 +225,10 @@ beepr::beep()
 #extract(fit1)$y[1,]
 #pairs(extract(fit1), pars = c(a, b)) #, y[1], sd_y, m[1], sd_m, c[1], c[2], c[3]))
 
-```
 
-# Summary of the posterior sample 
-```{r}
+#' 
+#' # Summary of the posterior sample 
+## ------------------------------------------------------------------------
 
 # traceplot of the problematic parameter
 params.df <- as.data.frame(extract(fit2, permuted=FALSE))
@@ -268,32 +266,32 @@ print(fit2, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
     # sd_omega = 0.1
     # sd_temp = 0.05 #1/999
 
-```
 
-```{r, eval=F}
+#' 
+## ---- eval=F-------------------------------------------------------------
+## 
+## #The higher lambda is, the more benefit pooling there is and the greater the benefit from [non-centered] parameterization in hierarchical models
+## # https://groups.google.com/d/msg/stan-users/HWiUtQLRCfE/RXT17CFcDQAJ
+## lambda <- function(fit, ...) {
+##     extracted_fit <- rstan::extract(fit, permuted = TRUE, ...)
+##     N <- length(extracted_fit)
+##     result <- rep(NA, N)
+##     names(result) <- names(extracted_fit)
+##     for (i in 1:N) {
+##         extracted_fit_i <- extracted_fit[[i]]
+##         if (length(dim(extracted_fit_i)) == 1) next #only calculate if more than
+##                                                     #1 dimension
+##         e <- extracted_fit_i - mean(extracted_fit_i)
+##         result[i] <- 1 - var(apply(e, 2, mean)) / mean(apply(e, 1, var))
+##     }
+##     return(result)
+## }
+## 
+## #lambda(fit1)
+## 
+## warnings()
+## sessionInfo()
 
-#The higher lambda is, the more benefit pooling there is and the greater the benefit from [non-centered] parameterization in hierarchical models
-# https://groups.google.com/d/msg/stan-users/HWiUtQLRCfE/RXT17CFcDQAJ
-lambda <- function(fit, ...) {
-    extracted_fit <- rstan::extract(fit, permuted = TRUE, ...)
-    N <- length(extracted_fit)
-    result <- rep(NA, N)
-    names(result) <- names(extracted_fit)
-    for (i in 1:N) {
-        extracted_fit_i <- extracted_fit[[i]]
-        if (length(dim(extracted_fit_i)) == 1) next #only calculate if more than 
-                                                    #1 dimension
-        e <- extracted_fit_i - mean(extracted_fit_i)
-        result[i] <- 1 - var(apply(e, 2, mean)) / mean(apply(e, 1, var))
-    }
-    return(result)
-}
-
-#lambda(fit1)
-
-warnings()
-sessionInfo()
-```
-
-
-
+#' 
+#' 
+#' 
