@@ -10,6 +10,9 @@ data {
   int<lower=0> L; // length of simplex vector representing reversal lasting L periods
   real<lower=0> sd_gamma_init;
   real<lower=0> sd_omega_init;
+  
+real<lower=0> sd_temp_init;  // for debugging only
+  
   real<lower=0> sd_y_init;
 //  real<lower=0> sd_m_init;
   real alpha_init; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
@@ -45,6 +48,8 @@ parameters {
   vector[K] err_gamma[J];
   vector[H] err_omega[J];
 
+real<lower=0> sd_temp; // for debugging only
+
 //  vector[N] err_m[J]; // underlying unbiased figure (scaled by Rev, total revenue)
 
 // real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
@@ -54,6 +59,7 @@ transformed parameters {
   vector[N] y[J];
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] D[J];
+  
 vector[N] temp0[J];  // for debugging only
 
   for (j in 1:J) {  
@@ -102,6 +108,9 @@ model {
 	sd_y ~ inv_gamma(2, sd_y_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_gamma ~ inv_gamma(2, sd_gamma_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_omega ~ inv_gamma(2, sd_omega_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+	
+sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
+
   alpha ~ normal(alpha_init, 0.5);
   beta ~ beta(2*beta_init, 2*(1-beta_init));
   g ~ normal(g_init, 0.2);
@@ -114,7 +123,7 @@ model {
 
     err_gamma[j] ~ normal(0, 1);
     err_omega[j] ~ normal(0, 1);
-temp[j] ~ normal(temp0[j], 1);   // for debugging only
+temp[j] ~ normal(temp0[j], sd_temp);   // for debugging only
 
 
     y[j,2:N] ~ normal(alpha + beta * y[j,1:(N - 1)], sd_y);

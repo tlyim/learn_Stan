@@ -10,8 +10,11 @@ data {
   real beta; // slope coefficient of the AR(1) process of y[n]
   vector[K] g; // coefficients of the K covariates in matrix X
   vector[H] w; // coefficients of the H covariates in matrix G
-  real<lower=0> sd_gamma; // sd of the hyperprior for gamma
+
+real<lower=0> sd_temp; // for debugging only
+
   real<lower=0> sd_omega; // sd of the hyperprior for gamma
+  real<lower=0> sd_gamma; // sd of the hyperprior for gamma
   real<lower=0> sd_y; // sd of the underlying unbiased figure (vector y)
 //  real<lower=0> sd_m; // sd of the misreporting extent (vector m = r - y)
 }
@@ -44,7 +47,7 @@ vector[N] temp[J];  // for debugging only
 //    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
 //    P[j] = 1 ./ square( G[j]*(w + sd_omega*err_omega[j]) );
     P[j] = rep_vector(2, N);//*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
-temp[j] = G[j]*(w + sd_omega*err_omega[j]) + normal_rng(0,1); // for debugging only
+temp[j] = G[j]*(w + sd_omega*err_omega[j]) + normal_rng(0, sd_temp); // for debugging only
 
 //    m[j,1] = normal_rng(X[j,1]*gamma[j], sd_m);
 //    m[j,1] = X[j,1]*gamma[j];
