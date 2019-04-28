@@ -43,12 +43,12 @@ parameters {
 //  real <lower=0,upper=1> d; // fractional reversal of prior-period manipluation by accruals
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
-  real<lower=0> sd_omega; // sd of the hyperprior for omega
-//  real<lower=0> sd_m; // sd of the misreporting extents (vector m = r - y)
-  vector[K] err_gamma[J];
-  vector[H] err_omega[J];
 
 real<lower=0> sd_temp; // for debugging only
+
+//  real<lower=0> sd_omega; // sd of the hyperprior for omega
+//  vector[H] err_omega[J];
+  vector[K] err_gamma[J];
 
 //  vector[N] err_m[J]; // underlying unbiased figure (scaled by Rev, total revenue)
 
@@ -74,7 +74,7 @@ vector[N] temp0[J];  // for debugging only
 
 //    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
     P[j] = rep_vector(2, N);//*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
-temp0[j] = G[j]*(w + sd_omega*err_omega[j]);  // for debugging only
+temp0[j] = G[j]*(w);// + sd_omega*err_omega[j]);  // for debugging only
 
     m[j] = b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
 
@@ -104,10 +104,9 @@ temp0[j] = G[j]*(w + sd_omega*err_omega[j]);  // for debugging only
 }
 model {
 // priors 
-//	sd_m ~ inv_gamma(2, sd_m_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_y ~ inv_gamma(2, sd_y_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_gamma ~ inv_gamma(2, sd_gamma_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
-	sd_omega ~ inv_gamma(2, sd_omega_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+//	sd_omega ~ inv_gamma(2, sd_omega_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	
 sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
 
@@ -117,12 +116,12 @@ sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
   w ~ normal(w_init, 0.2); //1);
   
 //  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
-  //  d ~ uniform(-1, 1);
+  //  V ~ uniform(-1, 1);
   
   for (j in 1:J) { 
 
     err_gamma[j] ~ normal(0, 1);
-    err_omega[j] ~ normal(0, 1);
+//    err_omega[j] ~ normal(0, 1);
 temp[j] ~ normal(temp0[j], sd_temp);   // for debugging only
 
 

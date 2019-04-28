@@ -47,7 +47,7 @@ vector[N] temp[J];  // for debugging only
 //    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
 //    P[j] = 1 ./ square( G[j]*(w + sd_omega*err_omega[j]) );
     P[j] = rep_vector(2, N);//*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
-temp[j] = G[j]*(w + sd_omega*err_omega[j]) + normal_rng(0, sd_temp); // for debugging only
+temp[j] = + normal_rng(0, sd_temp) + G[j]*(w);// + sd_omega*err_omega[j]) ; // for debugging only
 
 //    m[j,1] = normal_rng(X[j,1]*gamma[j], sd_m);
 //    m[j,1] = X[j,1]*gamma[j];
