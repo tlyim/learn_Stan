@@ -46,9 +46,8 @@ N = 16*4#4#2 #4 #7 number of (yearly) observations of a firm
 
 
 sd_temp = 1/999   #   // for debugging only
-sd_omega = 0.01
+sd_omega = 0.1
 sd_gamma = 0.02
-sd_omega = 0.01
 sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
 #sd_m = 0.02  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 
@@ -264,7 +263,8 @@ plot(params.df$iter, params.df$sd_omega, pch=16, cex=0.8, #col=c_dark,
     # d = c(0.7, 0.25, 0.05) # fractional reversal of prior-period manipluation by accruals
     # sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific/bus-model specific
     # sd_gamma = 0.02
-    # sd_omega = 1/999
+    # sd_omega = 0.1
+    # sd_temp = 1/999
 
 ```
 
