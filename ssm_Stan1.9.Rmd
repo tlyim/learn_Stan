@@ -5,6 +5,8 @@ output: html_notebook
 
 ```{r}
 
+#knitr::purl("ssm_Stan1.8.Rmd", output = "ssm_Stan1.8.R", documentation = 2)
+
 #library(tidyverse)
 library(dplyr)
 library(magrittr)
