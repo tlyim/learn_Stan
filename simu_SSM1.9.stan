@@ -8,6 +8,7 @@ data {
 
   real alpha; // intercept coefficient (drift) of the AR(1) process of the underlying unbiased accounting figure y[n]
   real beta; // slope coefficient of the AR(1) process of y[n]
+  real y_init;
   vector[K] g; // coefficients of the K covariates in matrix X
   vector[H] w; // coefficients of the H covariates in matrix G
 
@@ -16,7 +17,7 @@ real<lower=0> sd_temp; // for debugging only
   real<lower=0> sd_omega; // sd of the hyperprior for gamma
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
   real<lower=0> sd_y; // sd of the underlying unbiased figure (vector y)
-  real<lower=0> base;
+//  real<lower=0> base;
 //  real<lower=0> sd_m; // sd of the misreporting extent (vector m = r - y)
 }
 transformed data {
@@ -30,11 +31,23 @@ generated quantities {
   vector[N] b[J]; //<lower=-1,upper=1> bias effort driven by the temptation to misreport
   vector[N] P[J];  //<lower=0> potential room of manipulation constrained by governance mechanisms
 vector[N] temp[J];  // for debugging only
+  real base[J];
 
   for (j in 1:J) {
     vector[K] err_gamma[J];
     vector[H] err_omega[J];
     vector[N] tau[J]; // temptation to misreport
+
+// Initialize at a level three times of the LT stationary level
+      y[j,1] = normal_rng(y_init, sd_y);   // y should be nonnegative for Rev and nonpositive for Costs
+// Perhaps best to model y as always positive, with IsCost = 1, 0 to indicate Cost or Rev item 
+    for (n in 2:N) {
+//      m[j,n] = b[j,n] .* P[j,n];  // extent of misreporting resulting from bias effort and 
+      y[j,n] = alpha + normal_rng(beta*y[j,n-1], sd_y);
+    }
+
+//base[j] = 0.1*mean( sqrt(square(y[j])) ); // abs() has a kink at zero
+base[j] = (1)*mean( fabs(y[j]) ); // abs() has a kink at zero
     
     for (k in 1:K) {
       err_gamma[j,k] = normal_rng(0, 1);
@@ -45,24 +58,15 @@ vector[N] temp[J];  // for debugging only
 
     tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
     b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
-//    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
-//    P[j] = 1 ./ square( G[j]*(w + sd_omega*err_omega[j]) );
-    P[j] = rep_vector(base, N) + inv_square( G[j]*(w + sd_omega*err_omega[j]) );
+
+    P[j] = inv_logit( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
     //*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
 temp[j] = normal_rng(0, sd_temp) + G[j]*(w);// + sd_omega*err_omega[j]) ; // for debugging only
 
-//    m[j,1] = normal_rng(X[j,1]*gamma[j], sd_m);
-//    m[j,1] = X[j,1]*gamma[j];
-    m[j] = b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
-//    m[j,1] = b[j,1] .* P[j,1];  // extent of misreporting resulting from bias effort and 
-    
-    y[j,1] = normal_rng(alpha/(1-beta), sd_y);   // y should be nonnegative for Rev and nonpositive for Costs
-// Perhaps best to model y as always positive, with IsCost = 1, 0 to indicate Cost or Rev item 
-    for (n in 2:N) {
-//      m[j,n] = b[j,n] .* P[j,n];  // extent of misreporting resulting from bias effort and 
-      y[j,n] = alpha + normal_rng(beta*y[j,n-1], sd_y);
+    m[j] = b[j] .* P[j] .* rep_vector(base[j], N);  // extent of misreporting resulting from bias effort and 
+
     }
-  }
+  
 
 }
 

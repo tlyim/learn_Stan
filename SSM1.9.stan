@@ -15,6 +15,7 @@ real<lower=0> sd_temp_init;  // for debugging only
   
   real<lower=0> sd_y_init;
 //  real<lower=0> sd_m_init;
+  real y_init;
   real alpha_init; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real beta_init; // slope coefficient of the AR(1) process of y[n]
   vector[K] g_init;
@@ -25,7 +26,7 @@ vector[N] temp[J];  // for debugging only
   vector[N] r[J]; // reported figures (scaled by Rev, total revenue)
   matrix[N,K] X[J]; // covariates (capturing the dis/incentives of misreporting)
   matrix[N,H] G[J]; // covariates (capturing the strength of internal governance and external monitoring mechansims)
-  real<lower=0> base;
+//  real<lower=0> base;
 // forecasts  
 //  int<lower=0> N_new; // number of predictions
 //  matrix[N_new,K] X_new; // 
@@ -44,9 +45,10 @@ parameters {
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
 
-real<lower=0> sd_temp; // for debugging only
+//real<lower=0> sd_temp; // for debugging only
 
   real<lower=0> sd_omega; // sd of the hyperprior for omega
+  real<lower=0> base[J];
   vector[H] err_omega[J];
   vector[K] err_gamma[J];
 
@@ -60,7 +62,7 @@ transformed parameters {
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] D[J];
   
-vector[N] temp0[J];  // for debugging only
+//vector[N] temp0[J];  // for debugging only
 
   for (j in 1:J) {  
     vector[N] tau[J]; // temptation to misreport
@@ -73,10 +75,10 @@ vector[N] temp0[J];  // for debugging only
     b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
 
 //    P[j] = exp( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
-    P[j] = rep_vector(base, N) + inv_square( G[j]*(w + sd_omega*err_omega[j]) );//*inv_square( G[j]*(w + sd_omega*err_omega[j]) ) ./ inv_square( G[j]*(w + sd_omega*err_omega[j]) );
-temp0[j] = G[j]*(w);// + sd_omega*err_omega[j]);  // for debugging only
+    P[j] = inv_logit( (-1)*G[j]*(w + sd_omega*err_omega[j]) );
+//temp0[j] = G[j]*(w);// + sd_omega*err_omega[j]);  // for debugging only
 
-    m[j] = b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
+    m[j] = b[j] .* P[j] .* rep_vector(base[j], N);  // extent of misreporting resulting from bias effort and 
 
     
 //    D[j,1] = m[j,1];
@@ -108,9 +110,10 @@ model {
 	sd_gamma ~ inv_gamma(2, sd_gamma_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_omega ~ inv_gamma(2, sd_omega_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	
-sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
+  base ~ inv_gamma(2, y_init);    // for debugging only
+//sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
 
-  alpha ~ normal(alpha_init, 0.5);
+  alpha ~ normal(alpha_init, 0.1);
   beta ~ beta(2*beta_init, 2*(1-beta_init));
   g ~ normal(g_init, 0.2);
   w ~ normal(w_init, 0.2); //1);
@@ -122,7 +125,7 @@ sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
 
     err_gamma[j] ~ normal(0, 1);
     err_omega[j] ~ normal(0, 1);
-temp[j] ~ normal(temp0[j], sd_temp);   // for debugging only
+//temp[j] ~ normal(temp0[j], sd_temp);   // for debugging only
 
 
     y[j,2:N] ~ normal(alpha + beta * y[j,1:(N - 1)], sd_y);
