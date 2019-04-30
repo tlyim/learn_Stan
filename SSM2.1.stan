@@ -48,7 +48,7 @@ parameters {
 //real<lower=0> sd_temp; // for debugging only
 
   real<lower=0> sd_omega; // sd of the hyperprior for omega
-  real<lower=0> base[J];
+  real<lower=0,upper=1> base[J];
   vector[H] err_omega[J];
   vector[K] err_gamma[J];
 
@@ -96,7 +96,8 @@ vector[N] rho[J]; //
 //    D[j,(L+1):N] = m[j,(L+1):N] - d[1]*m[j,L:(N-1)] - d[2]*m[j,(L-1):(N-2)] - d[3]*m[j,(L-2):(N-3)];     // if estimated d < 1, this'd suggest taking more than one-period to reverse
     D[j,(L+1):N] = m[j,(L+1):N];
     for (l in 1:L) 
-      D[j,(L+1):N] += (-1)* d[l] * m[j,(L+1-l):(N-l)];
+//      D[j,(L+1):N] += (-1)* d[l] * m[j,(L+1-l):(N-l)];
+      D[j,(L+1):N] = D[j,(L+1):N] + (-1)* d[l] * m[j,(L+1-l):(N-l)];
 
 
     y[j] = r[j] - D[j];
@@ -112,7 +113,7 @@ model {
 	sd_gamma ~ inv_gamma(2, sd_gamma_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	sd_omega ~ inv_gamma(2, sd_omega_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 	
-  base ~ inv_gamma(2, y_init);    // for debugging only
+#  base ~ inv_gamma(2, y_init);    // for debugging only
 //sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
 
   alpha ~ normal(alpha_init, 0.1);

@@ -45,7 +45,7 @@ options(mc.cores = parallel::detectCores())  #
 ```{r}
 
 #base = 2    # set the base magnitude for P to ensure it's not too tiny to mess up the sampling
-J = 5 #00#50    # number of firms
+J = 10 #00#50    # number of firms
 N = 16*2#4#2 #4 #7 number of (yearly) observations of a firm
 
 
