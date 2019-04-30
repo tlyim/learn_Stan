@@ -7,9 +7,14 @@
 
 #knitr::purl("ssm_Stan1.9.Rmd", output = "ssm_Stan1.9.R", documentation = 2)
 
+.libPaths( c( "~/R_library/3.5", .libPaths() ) )
+.libPaths()
+
 #library(tidyverse)
 library(dplyr)
 library(magrittr)
+library(psych)
+library(tibble)
 
 #load previously saved Stan model objects
 #load(file = "StanObjects.rda")
@@ -44,7 +49,7 @@ options(mc.cores = parallel::detectCores())  #
 
 #base = 2    # set the base magnitude for P to ensure it's not too tiny to mess up the sampling
 J = 100 #00#50    # number of firms
-N = 16*2#4#2 #4 #7 number of (yearly) observations of a firm
+N = 16*4 #4#2 #4 #7 number of (yearly) observations of a firm
 
 
 sd_temp = 0.05  #1/999   #   // for debugging only
@@ -194,20 +199,19 @@ temp = temp.l,  #   // for debugging only
                  )
 
 # extract base that limits the lowest P reachable
-#base <- (y.mat + D.mat) %>% abs() %>%  median() %>% `*`(0.1)
-m.mat %>% t() %>% psych::describe() %>% print(digits=3)
-D.mat %>% t() %>% psych::describe() %>% print(digits=3)
-y.mat %>% t() %>% psych::describe() %>% print(digits=3)
-{ base.mat <- extract(simu_fit)$base[1,] } %>% t()
-psych::describe(base.mat) %>% print(digits=3)
-extract(simu_fit)$P[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
-extract(simu_fit)$b[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+#m.mat %>% t() %>% psych::describe() %>% print(digits=3)
+#D.mat %>% t() %>% psych::describe() %>% print(digits=3)
+#y.mat %>% t() %>% psych::describe() %>% print(digits=3)
+#{ base.mat <- extract(simu_fit)$base[1,] } %>% t()
+#psych::describe(base.mat) %>% print(digits=3)
+#extract(simu_fit)$P[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+#extract(simu_fit)$b[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
 
 #' 
 #' # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ## ------------------------------------------------------------------------
 
-n_iter = 4000#3000
+n_iter = 5000 #3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 1500
 #n_warmup = n_iter/2 
