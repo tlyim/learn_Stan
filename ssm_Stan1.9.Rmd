@@ -195,15 +195,14 @@ temp = temp.l,  #   // for debugging only
 #                 base = base
                  )
 
-# extract base that limits the lowest P reachable
-#base <- (y.mat + D.mat) %>% abs() %>%  median() %>% `*`(0.1)
-m.mat %>% t() %>% psych::describe() %>% print(digits=3)
-D.mat %>% t() %>% psych::describe() %>% print(digits=3)
-y.mat %>% t() %>% psych::describe() %>% print(digits=3)
-{ base.mat <- extract(simu_fit)$base[1,] } %>% t()
-psych::describe(base.mat) %>% print(digits=3)
-extract(simu_fit)$P[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
-extract(simu_fit)$b[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+# # extract base that limits the lowest P reachable
+# m.mat %>% t() %>% psych::describe() %>% print(digits=3)
+# D.mat %>% t() %>% psych::describe() %>% print(digits=3)
+# y.mat %>% t() %>% psych::describe() %>% print(digits=3)
+# { base.mat <- extract(simu_fit)$base[1,] } %>% t()
+# psych::describe(base.mat) %>% print(digits=3)
+# extract(simu_fit)$P[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+# extract(simu_fit)$b[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
 ```
 
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
@@ -236,7 +235,7 @@ fit1 <- stan(
 })
 
 fit2 <- fit1
-beepr::beep()
+# beepr::beep()
 
 #extract(fit1)$y[1,]
 #pairs(extract(fit1), pars = c(a, b)) #, y[1], sd_y, m[1], sd_m, c[1], c[2], c[3]))
@@ -270,16 +269,15 @@ plot(params.df$iter, params.df$sd_omega, pch=16, cex=0.8, #col=c_dark,
     #        fill=c(c_mid, c_dark, c_dark_highlight), border="white", bty="n")
 
 ss_complete_pool <- extract(fit2);
-# rho_T <- 5.5, alpha_T <- 3, sigma_T <- 2
-#print(fit2, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-fit2 %>% summary() %>% as.data.frame() %>% 
-  select(-c("summary.2.5.", "summary.97.5.") ) %>% 
-  select(-c(contains('chain'))) %>% 
-  rename_at(vars(contains('summary.')), list(~sub('summary.', '', .))) %>% 
-  tibble::rownames_to_column() %>% 
-  mutate_if(is.numeric, round, 4) %>% 
-  head(20) %>% 
-  print()
+print(fit2, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
+# fit2 %>% summary() %>% as.data.frame() %>% 
+#   select(-c("summary.2.5.", "summary.97.5.") ) %>% 
+#   select(-c(contains('chain'))) %>% 
+#   rename_at(vars(contains('summary.')), list(~sub('summary.', '', .))) %>% 
+#   tibble::rownames_to_column() %>% 
+#   mutate_if(is.numeric, round, 4) %>% 
+#   head(20) %>% 
+#   print()
 
     # alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
     # beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
@@ -290,7 +288,7 @@ fit2 %>% summary() %>% as.data.frame() %>%
     # sd_gamma = 0.05
     # sd_omega = 0.1
                       # sd_temp = 0.05 
-base.mat %>% t() 
+# base.mat %>% t() 
 ```
 
 ```{r}
