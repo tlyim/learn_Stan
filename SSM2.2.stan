@@ -49,7 +49,7 @@ parameters {
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
   real<lower=0> sd_omega; // sd of the hyperprior for omega
 real<lower=0> sd_base; // sd of the hyperprior for gamma
-real mu_base[J]; // sd of the hyperprior for gamma
+real<lower=0,upper=1> mu_base[J]; // sd of the hyperprior for gamma
 //vector<lower=0>[N] base[J];  // ,upper=1
 vector[N] err_log_base[J];
 
@@ -138,7 +138,7 @@ sd_base ~ normal(sd_base_init, 0.385); //0.2);  // Inverse-gamma (alpha, beta) h
 
 //  alpha ~ normal(alpha_init, 0.1);
   alpha01 ~ beta(3*alpha01_init, 3*(1-alpha01_init));
-  beta ~ beta(5*beta_init, 5*(1-beta_init));
+  beta ~ beta(6*beta_init, 6*(1-beta_init));
   g ~ normal(g_init, 0.2);
   w ~ normal(w_init, 0.2); //1);
   
