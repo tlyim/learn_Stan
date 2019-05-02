@@ -30,3 +30,5 @@ rsconnect/
 linear_statespace_models_LecQuantEcon.ipynb
 my_results
 simu_SSM_data.rda
+simu_SSM2.2_forum.stan
+SSM2.2_forum.stan
