@@ -5,7 +5,7 @@ output: html_notebook
 
 ```{r}
 
-#knitr::purl("ssm_Stan2.5.Rmd", output = "ssm_Stan2.5.R", documentation = 2)
+#knitr::purl("ssm_Stan2.3.Rmd", output = "ssm_Stan2.3.R", documentation = 2)
 
 #library(tidyverse)
 library(dplyr)
