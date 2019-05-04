@@ -1,0 +1,345 @@
+#' ---
+#' title: "State space model of accounting manipulation - Stan"
+#' output: html_notebook
+#' ---
+#' 
+## ------------------------------------------------------------------------
+
+#knitr::purl("ssm_Stan2.2.Rmd", output = "ssm_Stan2.2.R", documentation = 2)
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+
+#load previously saved Stan model objects
+#load(file = "StanObjects.rda")
+
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+
+#' 
+#' 
+#' # Estimate the simulated model with Stan - misreporting extent 
+#'   (forecasts specified in generated quantities block)
+#' //ignore these lines: 
+#' //  COGS2Rev, SGA2Rev, RnD2Rev with Rev2Rev = unit vector as the intercept)
+#' //   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
+#' 
+## NA
+#' 
+#' # Simulate data
+## NA
+#' 
+#' 
+#' 
+#' # Simulate data and fit the debug model (also, save Stan model objects) 
+## ------------------------------------------------------------------------
+
+#base = 2    # set the base magnitude for P to ensure it's not too tiny to mess up the sampling
+J = 100 #00#50    # number of firms
+N = 8*4#4#2 #4 #7 number of (yearly) observations of a firm
+
+
+#sd_temp = 0.05  #1/999   #   // for debugging only
+sd_base = 0.1  #1/999   #   // for debugging only
+sd_omega = 0.1
+sd_gamma = 0.05
+sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
+#sd_m = 0.02  # sd of misreporting extent m, which should be restrained by the governance setting (eg, audit committee chair with financial expertise, big 4 auditor, etc)
+
+alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
+y_init = 3*alpha/(1-beta) # initial y set to three times of the LT stationary level
+#set parameters of the data generation process of the misreporting extent m
+#g =c(-0.07, 0.2)
+g = c(0.5, -0.8, 2.5)
+K = length(g)
+#cvec <- matrix(data = g, nrow = K)  # define column vector as a matrix[N,1]
+w = c(-3.5, 7, 2)
+H = length(w)
+#d = c(0.8, 0.2) # fractional reversal of prior-period manipluation by accruals
+d = c(0.05, 0.7, 0.25) # fractional reversal of prior-period manipluation by accruals
+L = length(d)
+
+ratioNED_req = 0.25  # min ratio of non-executive directors (NED) required by law
+Big4_freq = 0.6
+downgrade_freq = 0.5
+integrity = 0.2 #(0,1)  0.5 = average       
+# integrity level, between (0,1), of the society, interpreted as likelihood to behave opportunistically
+# integrity level of an individual, indiv_integ between (-Inf,Inf), is 
+#   affected by a society's general integrity level in a stochastic fashion varying from period to period
+
+#M <- rbinom(N, 1, integrity)   # the decision to misreport earnings
+
+
+# Define function to convert data.frame with gvkey as the key to a list of matices
+df2mat.l <- function(z){
+  z %>% 
+  split(.$gvkey) %>% 
+  lapply(function(z) select(z, -c(gvkey))) %>% 
+  lapply(as.matrix)
+  }
+
+#set.seed(8)
+# covariate matrix X capturing the dis/incentive to misreport
+# downgrade = 1 if one or more analysts following the firm downgraded their stock recommendation in the last period
+X.l <- data.frame(
+  gvkey = rep(1:J, times=N),                   
+  constant = rep(1, J*N),
+  indiv_integ = rbeta(J*N, integrity, 1-integrity), 
+  downgrade = rbinom(J*N, 1, downgrade_freq)
+  ) %>%
+  df2mat.l()
+  # split(.$gvkey) %>% 
+  # lapply(function(z) select(z, -c(gvkey))) %>% 
+  # lapply(as.matrix)
+
+# covariate matrix G capturing the strength of internal governance and external monitoring mechansims
+G.l <- data.frame(
+  gvkey = rep(1:J, each=N), # note the difference from times=N
+  constant = rep(1, J*N),
+  ratioNED = rep(rbeta(J, 2*ratioNED_req, 2*(1-ratioNED_req)), each=N),
+  Big4 = rbinom(J*N, 1, Big4_freq)
+  ) %>%
+  df2mat.l()
+
+#colnames(Z) <- c("Rev2Rev", "COGS2Rev", "SGA2Rev", "RnD2Rev")
+
+simu_SSM_data <- list(J = J, 
+                      N = N, 
+                      K = K,
+                      H = H,
+                      X = X.l,
+                      G = G.l,
+                      y_init = y_init,
+                      alpha = alpha,
+                      beta = beta, 
+                      g = g,
+                      w = w,
+#sd_temp = sd_temp,  #   // for debugging only
+sd_base = sd_base,  #   // for debugging only
+                      sd_omega = sd_omega,
+                      sd_gamma = sd_gamma,
+                      sd_y = sd_y#,
+#                      base = base
+#                      sd_m = sd_m
+                      )
+# save(simu_SSM_data, file="simu_SSM_data.rda")
+# load(file="simu_SSM_data.rda")
+
+# Simulate SSM data
+simu_fit <- stan(#model_code = simu_SSM@model_code,
+                 file = "simu_SSM2.2.stan",  # Stan program
+                 data=simu_SSM_data, iter=1, #seed=987,  
+                 chains=1, algorithm="Fixed_param")  
+
+y.mat <- extract(simu_fit)$y[1,,]
+m.mat <- extract(simu_fit)$m[1,,]
+if (is.vector(m.mat)) m.mat <- matrix(m.mat, nrow = 1)
+
+D.mat <- apply(m.mat, MARGIN=1, 
+               function(m) {  # margin=1 means one after another by row   # , L, d)
+                # D <- m - d[1]*lag(m) - d[2]*lag(m,2L) - d[3]*lag(m,3L)
+                # D[1] = m[1]
+                # D[2] = m[2] - d[1]*m[1]     
+                # D[3] = m[3] - d[1]*m[2] - d[2]*m[1]
+                 D <- m
+                 for (i in 1:L) { D <- (D - d[i]*dplyr::lag(m,i, default = 0)) }
+                 D
+                 }
+               ) %>%   
+            t()
+
+r.l <- (y.mat + D.mat) %>%  
+  t() %>% 
+  split(col(.)) %>% 
+  lapply(as.vector)
+
+# For debugging only
+                    # temp.l <- extract(simu_fit)$temp[1,,] %>%  
+                    #   t() %>% 
+                    #   split(col(.)) %>% 
+                    #   lapply(as.vector)
+
+# Prepare SSM data for estimation using MCMC
+#N_new = 3
+SSM_data <- list(J = J,
+                 N = N, 
+                 K = K,
+                 H = H,
+                 L = L,
+                 sd_gamma_init = sd_gamma,
+                 sd_omega_init = sd_omega,
+sd_base_init = sd_base,  #   // for debugging only
+#sd_temp_init = sd_temp,  #   // for debugging only
+                 sd_y_init = sd_y,
+#                 sd_m_init = sd_m,
+                 y_init = y_init,
+                 alpha_init = alpha,
+                 beta_init = beta,
+                 g_init = g,
+                 w_init = w,
+#                 sd_c_init = sd_c_init,
+#temp = temp.l,  #   // for debugging only
+                 r = r.l, 
+                 X = X.l,
+                 G = G.l#,
+                 # Z_new = Z[1:N_new,],
+                 # N_new = N_new
+#                 base = base
+                 )
+
+# # extract base that limits the lowest P reachable
+# m.mat %>% t() %>% psych::describe() %>% print(digits=3)
+# D.mat %>% t() %>% psych::describe() %>% print(digits=3)
+# y.mat %>% t() %>% psych::describe() %>% print(digits=3)
+# { base.mat <- extract(simu_fit)$base[1,] } %>% t()
+# psych::describe(base.mat) %>% print(digits=3)
+# extract(simu_fit)$P[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+# extract(simu_fit)$b[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+
+#' 
+#' # Fit the full model (by referring to the debug model) to estimate underlying parameters
+## ------------------------------------------------------------------------
+
+n_iter = 5000#3000
+n_refresh = max(2, n_iter/10)
+n_warmup = 3000
+#n_warmup = n_iter/2 
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit1 <- stan(
+  file = "SSM2.2.stan",  # Stan program
+  data = SSM_data,    # named list of data
+#  model_code = SSM@model_code, 
+#  fit = fit0_debug,   # to save compilation time if the debug model was run
+  control = list(adapt_delta = 0.9999, 
+#                 stepsize = 0.05, #0.05, #0.01
+                 max_treedepth = 15),    # adjust when there're divergent transitions after warmup
+  chains = 8,             # default is 4 Markov chains
+#  cores = 8,
+#  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
+                # where length of list = number of chains
+#  seed = 555, 
+
+  iter = n_iter,#4000,#7000,#12000, #500 #2000,            # total number of iterations per chain
+  warmup = n_warmup,#500,          # number of warmup iterations per chain
+  refresh = n_refresh#500          # = 0 means no progress shown
+  )
+})
+
+fit2 <- fit1
+# beepr::beep()
+
+#extract(fit1)$y[1,]
+#pairs(extract(fit1), pars = c(a, b)) #, y[1], sd_y, m[1], sd_m, c[1], c[2], c[3]))
+
+
+#' 
+#' # Summary of the posterior sample 
+## ------------------------------------------------------------------------
+
+# traceplot of the problematic parameter
+params.df <- as.data.frame(extract(fit2, permuted=FALSE))
+names(params.df) <- gsub("chain:1.", "", names(params.df), fixed = TRUE)
+names(params.df) <- gsub("[", ".", names(params.df), fixed = TRUE)
+names(params.df) <- gsub("]", "", names(params.df), fixed = TRUE)
+params.df$iter <- 1:(n_iter-n_warmup)
+
+par(mar = c(4, 4, 0.5, 0.5))
+plot(params.df$iter, params.df$sd_y, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
+plot(params.df$iter, params.df$sd_gamma, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylim=c(0, 0.15))#, ylab="log(tau)", 
+plot(params.df$iter, params.df$sd_omega, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
+plot(params.df$iter, params.df$sd_base, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylim=c(0, 0.2))#, ylab="log(tau)", ylim=c(-6, 4))
+plot(params.df$iter, params.df$alpha01, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
+plot(params.df$iter, params.df$beta, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
+
+# running_means <- sapply(1:((n_iter-n_warmup)/10), function(n) mean(params.df$sd_omega)[1:(10*n)])
+# plot((1:(n_iter-n_warmup)/10), running_means, pch=16, cex=0.8, #col=c_mid, 
+#     xlab="Iteration")#, ylab="MCMC mean of log(tau)", ylim=c(0, 2))
+# abline(h=sd_omega, col="grey", lty="dashed", lwd=3)
+    # legend("bottomright", c("Centered, delta=0.90", "Centered, delta=0.99",
+    #                         "Non-Centered, delta=0.90"),
+    #        fill=c(c_mid, c_dark, c_dark_highlight), border="white", bty="n")
+
+pairs_stan <- function(chain, stan_model, pars) {
+  energy <- as.matrix(sapply(get_sampler_params(stan_model, inc_warmup = F), 
+                             function(x) x[,"energy__"]))
+  pars <- extract(stan_model, pars = pars, permuted = F)
+  df <- data.frame(energy[,chain], pars[,chain,])
+  names(df)[1] <- "energy"
+  GGally::ggpairs(df, title = paste0("Chain", chain), 
+                  lower = list(continuous = GGally::wrap("points", alpha = 0.2))) %>% 
+  print(progress = F)
+}
+
+pairs_stan(1, fit2, c("alpha", "beta", "sd_y", "sd_gamma", "g"))
+pairs_stan(4, fit2, c("alpha", "beta", "sd_y", "sd_gamma", "g"))
+pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
+pairs_stan(4, fit2, c("sd_base", "sd_omega", "w", "d"))
+
+
+ss_complete_pool <- extract(fit2);
+print(fit2, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
+# fit2 %>% summary() %>% as.data.frame() %>% 
+#   select(-c("summary.2.5.", "summary.97.5.") ) %>% 
+#   select(-c(contains('chain'))) %>% 
+#   rename_at(vars(contains('summary.')), list(~sub('summary.', '', .))) %>% 
+#   tibble::rownames_to_column() %>% 
+#   mutate_if(is.numeric, round, 4) %>% 
+#   head(20) %>% 
+#   print()
+
+    # alpha01 = 0.52; alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+    # beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
+    # g = c(0.5, -0.8, 2.5)
+    # w = c(-3.5, 7, 2)
+    # d = c(0.05, 0.7, 0.25) # fractional reversal of prior-period manipluation by accruals
+    # sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific/bus-model specific
+    # sd_gamma = 0.05
+    # sd_omega = 0.1
+    # sd_base = 0.1  #1/999   #   // for debugging only
+
+# base.mat %>% t() 
+
+#' 
+## ------------------------------------------------------------------------
+
+#The higher lambda is, the more benefit pooling there is and the greater the benefit from [non-centered] parameterization in hierarchical models
+# https://groups.google.com/d/msg/stan-users/HWiUtQLRCfE/RXT17CFcDQAJ
+lambda <- function(fit, ...) {
+    extracted_fit <- rstan::extract(fit, permuted = TRUE, ...)
+    N <- length(extracted_fit)
+    result <- rep(NA, N)
+    names(result) <- names(extracted_fit)
+    for (i in 1:N) {
+        extracted_fit_i <- extracted_fit[[i]]
+        if (length(dim(extracted_fit_i)) == 1) next #only calculate if more than 
+                                                    #1 dimension
+        e <- extracted_fit_i - mean(extracted_fit_i)
+        result[i] <- 1 - var(apply(e, 2, mean)) / mean(apply(e, 1, var))
+    }
+    return(result)
+}
+
+#lambda(fit1)
+
+warnings()
+sessionInfo()
+
+#' 
+#' 
+#' 
