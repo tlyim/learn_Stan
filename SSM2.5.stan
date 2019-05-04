@@ -128,17 +128,17 @@ model {
 // priors 
 	sd_y ~ normal(sd_y_init, 0.12);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 //	sd_y ~ inv_gamma(2, sd_y_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
-	sd_gamma ~ normal(sd_gamma_init, 0.025);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+	sd_gamma ~ normal(sd_gamma_init, 0.026);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 //	sd_omega ~ inv_gamma(2, sd_omega_init);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
-	sd_omega ~ normal(sd_omega_init, 0.045);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
-sd_base ~ normal(sd_base_init, 0.385); //0.2);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+	sd_omega ~ normal(sd_omega_init, 0.048);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
+sd_base ~ normal(sd_base_init, 0.39); //0.2);  // Inverse-gamma (alpha, beta) has mean = beta/(alpha - 1) if alpha > 1
 
 //  base ~ inv_gamma(2, y_init);    // for debugging only
 //sd_temp ~ inv_gamma(2, sd_temp_init);    // for debugging only
 
 //  alpha ~ normal(alpha_init, 0.1);
   alpha01 ~ beta(3*alpha01_init, 3*(1-alpha01_init));
-  beta ~ beta(6*beta_init, 6*(1-beta_init));
+  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init));
   g ~ normal(g_init, 0.2);
   w ~ normal(w_init, 0.2); //1);
   

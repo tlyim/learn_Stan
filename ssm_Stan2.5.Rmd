@@ -45,8 +45,8 @@ options(mc.cores = parallel::detectCores())  #
 ```{r}
 
 #base = 2    # set the base magnitude for P to ensure it's not too tiny to mess up the sampling
-J = 100 #00#50    # number of firms
-N = 8*4#4#2 #4 #7 number of (yearly) observations of a firm
+J = 200 #00#50    # number of firms
+N = 5*4#4#2 #4 #7 number of (yearly) observations of a firm
 
 
 #sd_temp = 0.05  #1/999   #   // for debugging only
@@ -211,9 +211,9 @@ sd_base_init = sd_base,  #   // for debugging only
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 5000#3000
+n_iter = 2500#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 3000
+n_warmup = 1000
 #n_warmup = n_iter/2 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({
@@ -222,10 +222,10 @@ fit1 <- stan(
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.9999, 
+  control = list(adapt_delta = 0.995, 
 #                 stepsize = 0.05, #0.05, #0.01
-                 max_treedepth = 15),    # adjust when there're divergent transitions after warmup
-#  chains = 1,#8,             # default is 4 Markov chains
+                 max_treedepth = 13),    # adjust when there're divergent transitions after warmup
+#  chains = 8,#1,#8,             # default is 4 Markov chains
 #  cores = 8,
 #  init = init, # where init = list(list(mu=...,sigma=...), list(mu=..., sigma=...), ...) 
                 # where length of list = number of chains
@@ -247,6 +247,19 @@ fit2 <- fit1
 
 # Summary of the posterior sample 
 ```{r}
+
+ss_complete_pool <- extract(fit2);
+print(fit2, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
+save(fit2 , file="fit2.rda")
+# fit2 %>% summary() %>% as.data.frame() %>% 
+#   select(-c("summary.2.5.", "summary.97.5.") ) %>% 
+#   select(-c(contains('chain'))) %>% 
+#   rename_at(vars(contains('summary.')), list(~sub('summary.', '', .))) %>% 
+#   tibble::rownames_to_column() %>% 
+#   mutate_if(is.numeric, round, 4) %>% 
+#   head(20) %>% 
+#   print()
+
 
 # traceplot of the problematic parameter
 params.df <- as.data.frame(extract(fit2, permuted=FALSE))
@@ -293,17 +306,6 @@ pairs_stan(4, fit2, c("alpha", "beta", "sd_y", "sd_gamma", "g"))
 pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
 pairs_stan(4, fit2, c("sd_base", "sd_omega", "w", "d"))
 
-
-ss_complete_pool <- extract(fit2);
-print(fit2, probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-# fit2 %>% summary() %>% as.data.frame() %>% 
-#   select(-c("summary.2.5.", "summary.97.5.") ) %>% 
-#   select(-c(contains('chain'))) %>% 
-#   rename_at(vars(contains('summary.')), list(~sub('summary.', '', .))) %>% 
-#   tibble::rownames_to_column() %>% 
-#   mutate_if(is.numeric, round, 4) %>% 
-#   head(20) %>% 
-#   print()
 
     # alpha01 = 0.52; alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
     # beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
