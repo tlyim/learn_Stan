@@ -44,7 +44,7 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-J = 20 #200     # number of firms
+J = 15#20 #200     # number of firms
 N = 4*15#5#15 #10 #20  #number of (quarterly) observations of a firm
 
 sd_base = 0.1  
@@ -355,11 +355,11 @@ pairs_stan <- function(chain, stan_model, pars) {
 }
 
 pairs_stan(1, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
-pairs_stan(4, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
+pairs_stan(3, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
 pairs_stan(1, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
-pairs_stan(4, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
+pairs_stan(3, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
 pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
-pairs_stan(4, fit2, c("sd_base", "sd_omega", "w", "d"))
+pairs_stan(3, fit2, c("sd_base", "sd_omega", "w", "d"))
 
 
 par(mar = c(4, 4, 0.5, 0.5))
