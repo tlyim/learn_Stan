@@ -140,7 +140,8 @@ sd_pi ~ normal(0, 10);//cauchy(0, 5);//
 //  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init));
 //  rho_ST ~ beta(5.5*rho_ST_init, 5.5*(1-rho_ST_init));
 //  rho_LT ~ beta(5.5*rho_LT_init, 5.5*(1-rho_LT_init));
-rho_ST ~ exponential(0.1);// uniform(0,0.2);
+rho_ST ~ normal(0,0.125);// uniform(0,0.2);
+//rho_ST ~ exponential(0.1);// uniform(0,0.2);
 //rho_LT ~ exponential(20);// uniform(0,0.2);
   p ~ normal(0, 10); //  10); //0.2); //  
   g ~ normal(0, 10);//0); //0.2); // g_init
