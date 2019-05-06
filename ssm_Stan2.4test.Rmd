@@ -165,22 +165,18 @@ simu_SSM_data <- list(J = J,
                       sd_omega = sd_omega,
                       sd_gamma = sd_gamma,
                       sd_y = sd_y
-#                      sd_y = sd_y#,
-#                      base = base
-#                      sd_m = sd_m
                       )
 # save(simu_SSM_data, file="simu_SSM_data.rda")
 # load(file="simu_SSM_data.rda")
 
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
-                 file = "simu_SSM2.3test.stan",  # Stan program
+                 file = "simu_SSM2.4test.stan",  # Stan program
 #                 file = "simu_SSM2.4.stan",  # Stan program
                  data=simu_SSM_data, iter=1, #seed=987,  
                  chains=1, algorithm="Fixed_param")  
 
 y.mat <- extract(simu_fit)$y[1,,]
-
 
 
 m.mat <- extract(simu_fit)$m[1,,]
@@ -271,11 +267,11 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 20#00#2500#3000
+n_iter = 500#0#2500#3000
 n_refresh = max(2, n_iter/10)
 #n_warmup = 1000
 n_warmup = n_iter/2 
-n_chains = 4
+n_chains = 3
 
 
 
@@ -293,12 +289,9 @@ init_ll <- lapply(1:n_chains, function(id) initf2(chain_id = id))
 system.time({
 fit1 <- stan(
   
-  
-  file = "SSM2.3test.stan",  # Stan program
+file = "SSM2.4test.stan",  # Stan program
 #  file = "SSM2.4.stan",  # Stan program
 
-  
-  
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
@@ -327,7 +320,7 @@ fit2 <- fit1
 ```{r}
 
 ss_complete_pool <- extract(fit2);
-print(fit2, c("mu_alpha", "beta", "delta", "rho_ST", #"rho_LT",
+print(fit2, c("mu_alpha", "beta", "delta", "rho_ST", "rho_LT",
               "p", "g", "w", "d",
               "sd_pi", "sd_y", "sd_gamma", "sd_omega", "sd_base"),
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
@@ -363,17 +356,17 @@ pairs_stan <- function(chain, stan_model, pars) {
 
 pairs_stan(1, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
 pairs_stan(4, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
-pairs_stan(1, fit2, c("rho_ST", "delta", "sd_pi", "p"))
-pairs_stan(4, fit2, c("rho_ST", "delta", "sd_pi", "p"))
+pairs_stan(1, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
+pairs_stan(4, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
 pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
 pairs_stan(4, fit2, c("sd_base", "sd_omega", "w", "d"))
 
 
 par(mar = c(4, 4, 0.5, 0.5))
-# plot(params.df$iter, params.df$rho_LT, pch=16, cex=0.8, #col=c_dark, 
-#      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$rho_ST, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
+plot(params.df$iter, params.df$rho_LT, pch=16, cex=0.8, #col=c_dark, 
+    xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$delta, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$sd_pi, pch=16, cex=0.8, #col=c_dark, 
@@ -399,9 +392,7 @@ plot(params.df$iter, params.df$beta, pch=16, cex=0.8, #col=c_dark,
     #                         "Non-Centered, delta=0.90"),
     #        fill=c(c_mid, c_dark, c_dark_highlight), border="white", bty="n")
 
-
-
-
+#====================================================
     # alpha01 = 0.52; alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
     # beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
 # rho_LT = 0.02, rho_ST = 0.1,   
