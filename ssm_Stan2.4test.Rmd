@@ -280,11 +280,11 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 15#00#0#2500#3000
+n_iter = 2500#3000
 n_refresh = max(2, n_iter/10)
-#n_warmup = 1000
-n_warmup = n_iter/2 
-n_chains = 2
+n_warmup = 1000
+#n_warmup = n_iter/2 
+n_chains = 8
 
 
 
@@ -334,8 +334,8 @@ fit2 <- fit1
 
 ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_alpha", "beta", "delta", "rho_ST", "rho_LT",
-              "p", "g", "w", "d",
-              "sd_pi", "sd_y", "sd_gamma", "sd_omega", "sd_base"),
+              "p", "g", "w", "d", "mu_season", "sd_season",
+              "sd_y", "sd_pi", "sd_gamma", "sd_omega", "sd_base"),
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 save(fit2 , file="fit2.rda")
 # fit2 %>% summary() %>% as.data.frame() %>% 
@@ -360,11 +360,13 @@ pairs_stan <- function(chain, stan_model, pars) {
 }
 
 pairs_stan(1, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
-pairs_stan(3, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
+pairs_stan(2, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
+pairs_stan(1, fit2, c("sd_season", "mu_season"))
+pairs_stan(2, fit2, c("sd_season", "mu_season"))
 pairs_stan(1, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
-pairs_stan(3, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
+pairs_stan(2, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
 pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
-pairs_stan(3, fit2, c("sd_base", "sd_omega", "w", "d"))
+pairs_stan(2, fit2, c("sd_base", "sd_omega", "w", "d"))
 
 
 # traceplot of the problematic parameter
@@ -382,6 +384,8 @@ plot(params.df$iter, params.df$rho_LT, pch=16, cex=0.8, #col=c_dark,
 plot(params.df$iter, params.df$delta, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$sd_pi, pch=16, cex=0.8, #col=c_dark, 
+     xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
+plot(params.df$iter, params.df$sd_season, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$sd_y, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
@@ -409,15 +413,15 @@ plot(params.df$iter, params.df$beta, pch=16, cex=0.8, #col=c_dark,
 #====================================================
     # alpha01 = 0.52; alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
     # beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
-# rho_LT = 0.02, rho_ST = 0.1,   
+# delta = 0.65, rho_LT = 0.02, rho_ST = 0.1,   
 # p = c(-4, -1, 3.5)
     # g = c(0.5, -0.8, 2.5)
     # w = c(-3.5, 7, 2)
     # d = c(0.05, 0.7, 0.25) # fractional reversal of prior-period manipluation by accruals
     # sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific/bus-model specific
-# sd_pi = 0.05, sd_gamma = 0.05
-    # sd_omega = 0.1
-    # sd_base = 0.1  #1/999   #   // for debugging only
+    # sd_gamma = 0.05, sd_omega = 0.1, sd_base = 0.1  #1/999   #   // for debugging only
+# sd_pi = 0.05, sd_season = 0.02
+# mu_season = c(-0.03, -0.06, 0.05)
 
 # base.mat %>% t() 
 ```
