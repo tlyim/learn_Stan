@@ -46,7 +46,10 @@ options(mc.cores = parallel::detectCores())  #
 
 J = 15#20 #200     # number of firms
 N = 4*15#5#15 #10 #20  #number of (quarterly) observations of a firm
+Q = 4 # quarterly time series
 
+mu_season = c(-0.03, -0.06, 0.05)
+sd_season = 0.02
 sd_base = 0.1  
 sd_omega = 0.1
 sd_gamma = 0.05
@@ -56,7 +59,8 @@ sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specif
 mu_alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
 mu_alpha01 = 0.5*(1 + mu_alpha);
 beta = 0.6  # slope parameter of the AR(1) processs of the underlying unbiased figure
-delta = 0.65 # heavily discounted sales increase current-year sales not as much as the reduction in next year
+delta = 0.65 # reversal coeff. of real EM (eg, prior year's heavily discounted sales taking from this year's)
+# delta can be bigger than, eg, sales taken from last year's heavy discount that would have been higher w/o discount; but delta can be less than 1 if the heavy discount does stimulate more sales than taken from next yaer's
 y_LT = mu_alpha/(1-beta)
 y_init = 3*y_LT # initial y for data simulation set to three times of the LT stationary level
 
@@ -146,6 +150,7 @@ G.l <- data.frame(
 
 simu_SSM_data <- list(J = J, 
                       N = N, 
+                      Q = Q,
                       I = I,
                       K = K,
                       H = H,
@@ -161,6 +166,8 @@ simu_SSM_data <- list(J = J,
                       p = p,
                       g = g,
                       w = w,
+                      mu_season = mu_season,
+                      sd_season = sd_season,
                       sd_base = sd_base, 
                       sd_omega = sd_omega,
                       sd_gamma = sd_gamma,
@@ -177,7 +184,6 @@ simu_fit <- stan(#model_code = simu_SSM@model_code,
                  chains=1, algorithm="Fixed_param")  
 
 y.mat <- extract(simu_fit)$y[1,,]
-
 
 m.mat <- extract(simu_fit)$m[1,,]
 
@@ -200,6 +206,11 @@ r.l <- (y.mat + D.mat) %>%
   split(col(.)) %>% 
   lapply(as.vector)
 
+q.l <- extract(simu_fit)$q[1,] 
+# %>%  
+#   t() %>% 
+#   split(col(.)) %>% 
+#   lapply(as.vector)
 
 # For debugging only
       # RealST.l <- extract(simu_fit)$RealST[1,,] %>%
@@ -228,6 +239,7 @@ r.l <- (y.mat + D.mat) %>%
 #N_new = 3
 SSM_data <- list(J = J,
                  N = N, 
+                 Q = Q,
                  I = I,
                  K = K,
                  H = H,
@@ -245,6 +257,7 @@ SSM_data <- list(J = J,
 #                 p_init = p,
 #                 g_init = g,
 #                 w_init = w,
+                 q = q.l,   
                  r = r.l, 
                  Z = Z.l,
                  X = X.l,
@@ -267,17 +280,17 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 500#0#2500#3000
+n_iter = 15#00#0#2500#3000
 n_refresh = max(2, n_iter/10)
 #n_warmup = 1000
 n_warmup = n_iter/2 
-n_chains = 3
+n_chains = 2
 
 
 
 initf2 <- function(chain_id = 1) {
   list(mu_alpha01 = mu_alpha01, beta = beta, # alpha = alpha, 
-       p = p, g = g, w = w, d = d, 
+       p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
        y = array(y_LT, dim = c(J,N)),
        delta = delta, rho_ST = rho_ST, rho_LT = rho_LT, sd_pi = sd_pi,  
        sd_y = sd_y, sd_base = sd_base, sd_gamma = sd_gamma, sd_omega = sd_omega)
@@ -335,14 +348,6 @@ save(fit2 , file="fit2.rda")
 #   print()
 
 
-# traceplot of the problematic parameter
-params.df <- as.data.frame(extract(fit2, permuted=FALSE))
-names(params.df) <- gsub("chain:1.", "", names(params.df), fixed = TRUE)
-names(params.df) <- gsub("[", ".", names(params.df), fixed = TRUE)
-names(params.df) <- gsub("]", "", names(params.df), fixed = TRUE)
-params.df$iter <- 1:(n_iter-n_warmup)
-
-
 pairs_stan <- function(chain, stan_model, pars) {
   energy <- as.matrix(sapply(get_sampler_params(stan_model, inc_warmup = F), 
                              function(x) x[,"energy__"]))
@@ -361,6 +366,13 @@ pairs_stan(3, fit2, c("rho_ST", "rho_LT", "delta", "sd_pi", "p"))
 pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
 pairs_stan(3, fit2, c("sd_base", "sd_omega", "w", "d"))
 
+
+# traceplot of the problematic parameter
+params.df <- as.data.frame(extract(fit2, permuted=FALSE))
+names(params.df) <- gsub("chain:1.", "", names(params.df), fixed = TRUE)
+names(params.df) <- gsub("[", ".", names(params.df), fixed = TRUE)
+names(params.df) <- gsub("]", "", names(params.df), fixed = TRUE)
+params.df$iter <- 1:(n_iter-n_warmup)
 
 par(mar = c(4, 4, 0.5, 0.5))
 plot(params.df$iter, params.df$rho_ST, pch=16, cex=0.8, #col=c_dark, 
@@ -383,6 +395,8 @@ plot(params.df$iter, params.df$mu_alpha01, pch=16, cex=0.8, #col=c_dark,
      xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$beta, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylim=c(0, 0.3))#, ylab="log(tau)", ylim=c(-6, 4))
+
+
 
 # running_means <- sapply(1:((n_iter-n_warmup)/10), function(n) mean(params.df$sd_omega)[1:(10*n)])
 # plot((1:(n_iter-n_warmup)/10), running_means, pch=16, cex=0.8, #col=c_mid, 
