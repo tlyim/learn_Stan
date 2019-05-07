@@ -1,4 +1,4 @@
-data {
+data { 
   int<lower=0> J; // number of firms
   int<lower=0> N; // number of observations (for different years)
   int<lower=0> I; // number of coefficents for the column vectors in covariate matrix Z (which can equal X)

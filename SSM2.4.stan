@@ -30,7 +30,7 @@ parameters {
   real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
   real<lower=0,upper=1> delta; // slope coefficient of the AR(1) process of y[n]
 real<lower=0> rho_ST; // coeff. of the ST impact of real EM
-//real<lower=0,upper=1> rho_LT; // coeff. of the LT impact of real EM
+real<lower=0> rho_LT; // coeff. of the LT impact of real EM
   vector[I] p; // coefficients of the K covariates in matrix Z
   vector[K] g; // coefficients of the K covariates in matrix X
   vector[H] w; // coefficients of the H covariates in matrix G
@@ -74,8 +74,8 @@ vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
    zeta[j] = Z[j]*(p + sd_pi*err_pi[j]);  // temptation to manage current-period real earnings upward
 RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
 //RealST[j] = rep_vector(0.1, N) ./ ( 1 + exp((-1)*zeta[j]) );
-RealLT[j] = rep_vector(0.5*0.04, N) ./ ( 1 + exp((-1)*zeta[j]) );
-//RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
+//RealLT[j] = rep_vector(0.5*0.04, N) ./ ( 1 + exp((-1)*zeta[j]) );
+RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
 
     tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
     chi[j] = G[j]*(w + sd_omega*err_omega[j]);
@@ -131,18 +131,21 @@ model {
 //	sd_omega ~ cauchy(0, 5);//normal(0, 1);//
 //  sd_base ~ cauchy(0, 5);//normal(0, 1);//
   	sd_y ~ normal(0, 10);//cauchy(0, 5);//
-sd_pi ~ normal(0, 10);//cauchy(0, 5);//
-	sd_gamma ~ normal(0, 10);//cauchy(0, 5);//
-	sd_omega ~ normal(0, 10);//cauchy(0, 5);//
   sd_base ~ normal(0, 10);//cauchy(0, 5);//
+// 	sd_gamma ~ normal(0, 10);//cauchy(0, 5);//
+// 	sd_omega ~ normal(0, 10);//cauchy(0, 5);//
+// sd_pi ~ normal(0, 10);//cauchy(0, 5);//
   
 //  mu_alpha01 ~ beta(3*mu_alpha01_init, 3*(1-mu_alpha01_init));
 //  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init));
-//  rho_ST ~ beta(5.5*rho_ST_init, 5.5*(1-rho_ST_init));
-//  rho_LT ~ beta(5.5*rho_LT_init, 5.5*(1-rho_LT_init));
+
+	sd_gamma ~ normal(0, 0.125);//cauchy(0, 5);//
+	sd_omega ~ normal(0, 0.125);//cauchy(0, 5);//
+sd_pi ~ normal(0, 0.125);//cauchy(0, 5);//
 rho_ST ~ normal(0,0.125);// uniform(0,0.2);
 //rho_ST ~ exponential(0.1);// uniform(0,0.2);
 //rho_LT ~ exponential(20);// uniform(0,0.2);
+rho_LT ~ normal(0,0.125);// uniform(0,0.2);
   p ~ normal(0, 10); //  10); //0.2); //  
   g ~ normal(0, 10);//0); //0.2); // g_init
   w ~ normal(0, 10);//0); //0.2); //1);  // w_init
@@ -167,8 +170,6 @@ rho_ST ~ normal(0,0.125);// uniform(0,0.2);
 //      y[j,2:N] ~ normal(mu_alpha + beta *( y[j,1:(N-1)] - RealST[j,1:(N - 1)] ) + RealST[j,2:N], sd_y);
       y[j,2:N] ~ normal(alpha[j,1:N-1] + beta*y[j,1:(N-1)] - delta*RealST[j,1:(N - 1)] + RealST[j,2:N], sd_y);
 //      y[j,2:N] ~ normal(alpha[j,1:N-1] + beta * y[j,1:N-1], sd_alpha);
-
-
 
   }
 //  M ~ bernoulli_logit(ilogodds); 
