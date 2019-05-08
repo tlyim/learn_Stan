@@ -98,8 +98,10 @@ int shift = poisson_rng(1) % Q;
       }
     zeta[j] = Z[j]*(p + sd_pi*err_pi[j]);  // temptation to manage current-period real earnings upward
 
-RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
-RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
+//RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
+//RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
+RealST[j] = rho_ST * inv_logit( (-1)*zeta[j] );
+RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
 
 
 
