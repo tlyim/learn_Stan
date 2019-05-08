@@ -44,7 +44,7 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-J = 5#20 #200     # number of firms
+J = 25#20 #200     # number of firms
 N = 4*10#5#15 #10 #20  #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -72,7 +72,7 @@ rho_LT = 5  # ; =0 will remove the LT impact
 
 # parameters of the data generation process of the temptation to do real EM
 #p = c(-4, -1, 3.5)
-p = c(-4.2, -1, 3.5)
+p = c(-4.25, -1, 3.5)
 I = length(p)
 #pvec <- matrix(data = p, nrow = I)  # define column vector as a matrix[N,1]
 #Z.l[[3]]%*%p %>%  str()  #ok with p as will be converted accordingly
@@ -224,24 +224,24 @@ q <- extract(simu_fit)$q[1,]
       # RealST.l
       # lapply(RealST.l, mean) %>% unlist() %>%  mean()
 
-      RealLT.l <- extract(simu_fit)$RealLT[1,,] %>%
-round(3) %>% 
-        t() %>%
-        split(col(.)) %>%
-        lapply(as.vector)
-      RealLT.l # %>% unlist() %>% round(5))
-      lapply(RealLT.l, mean) %>% unlist() %>%  mean()
-
-      #lapply(Z.l, (function(x) x%*%p))
-      y.mat
-      y.mat %>%  mean()
-      y.mat %>% abs() %>% mean()
-      D.mat %>%  mean()
-      D.mat %>% abs() %>% mean()
-      m.mat %>%  mean()
-      m.mat %>% abs() %>% mean()
-      m.mat
-      lapply(r.l, mean) %>% unlist() %>%  mean()
+#       RealLT.l <- extract(simu_fit)$RealLT[1,,] %>%
+# round(3) %>% 
+#         t() %>%
+#         split(col(.)) %>%
+#         lapply(as.vector)
+#       RealLT.l # %>% unlist() %>% round(5))
+#       lapply(RealLT.l, mean) %>% unlist() %>%  mean()
+# 
+#       #lapply(Z.l, (function(x) x%*%p))
+#       y.mat
+#       y.mat %>%  mean()
+#       y.mat %>% abs() %>% mean()
+#       D.mat %>%  mean()
+#       D.mat %>% abs() %>% mean()
+#       m.mat %>%  mean()
+#       m.mat %>% abs() %>% mean()
+#       m.mat
+#       lapply(r.l, mean) %>% unlist() %>%  mean()
 
 
 # Prepare SSM data for estimation using MCMC
@@ -289,11 +289,11 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 25#00#3000
+n_iter = 1800#3000
 n_refresh = max(2, n_iter/10)
-#n_warmup = 1000
-n_warmup = n_iter/2 
-n_chains = 1#4#8
+n_warmup = 1000
+#n_warmup = n_iter/2 
+n_chains = 4#8
 
 
 
@@ -341,12 +341,12 @@ fit2 <- fit1
 # Summary of the posterior sample 
 ```{r}
 
+save(fit2 , file="fit2.rda")#file="~/fit2.rda")
 ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_alpha", "beta", "mu_u1", "rho_LT", #"rho_ST", #"mu_u1", #"delta", 
               "p", "g", "w", "d", "mu_season", "sd_season",
               "sd_pi", "sd_y", "sd_gamma", "sd_omega", "sd_base"),
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-save(fit2 , file="fit2.rda")
 # fit2 %>% summary() %>% as.data.frame() %>% 
 #   select(-c("summary.2.5.", "summary.97.5.") ) %>% 
 #   select(-c(contains('chain'))) %>% 
@@ -367,6 +367,17 @@ pairs_stan <- function(chain, stan_model, pars) {
                   lower = list(continuous = GGally::wrap("points", alpha = 0.2))) %>% 
   print(progress = F)
 }
+
+pairs_stan(1, fit2, c("rho_LT", "sd_pi", "mu_u1", "mu_alpha", "beta",  "mu_season"))
+pairs_stan(2, fit2, c("rho_LT", "sd_pi", "mu_u1", "mu_alpha", "beta",  "mu_season"))
+pairs_stan(1, fit2, c("rho_LT", "sd_pi", "sd_gamma", "sd_omega", "sd_season", "sd_base", "sd_y"))
+pairs_stan(2, fit2, c("rho_LT", "sd_pi", "sd_gamma", "sd_omega", "sd_season", "sd_base", "sd_y"))
+pairs_stan(1, fit2, c("rho_LT", "sd_pi", "p", "w"))
+pairs_stan(2, fit2, c("rho_LT", "sd_pi", "p", "w"))
+pairs_stan(1, fit2, c("rho_LT", "sd_pi", "p", "g"))
+pairs_stan(2, fit2, c("rho_LT", "sd_pi", "p", "g"))
+pairs_stan(1, fit2, c("rho_LT", "sd_pi", "p", "d"))
+pairs_stan(2, fit2, c("rho_LT", "sd_pi", "p", "d"))
 
 pairs_stan(1, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
 pairs_stan(2, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
