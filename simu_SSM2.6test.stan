@@ -107,13 +107,13 @@ RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
 
 ///    err_y[j,1] = normal_rng(0, 1);
 //    alpha[j,1] = mu_alpha + sd_y * err_alpha[j,1] - RealLT[j,1];   // y should be nonnegative for Rev and nonpositive for Costs
-    alpha[j,1] = mu_alpha;// - RealLT[j,1];   // y should be nonnegative for Rev and nonpositive for Costs
+    alpha[j,1] = mu_alpha - RealLT[j,1];   // y should be nonnegative for Rev and nonpositive for Costs
     u[j,1] = season_n[j,1] + y_init + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
 //    y[j,1] = y_init + RealST[j,1] + sd_y * err_y[j,1];   // y should be nonnegative for Rev and nonpositive for Costs
     for (n in 2:N) {
 //      err_y[j,n] = normal_rng(0, 1);
  //     alpha[j,n] = alpha[j,n-1] + sd_y * err_alpha[j,n] - RealLT[j,n];
-      alpha[j,n] = alpha[j,n-1];// - RealLT[j,n];
+      alpha[j,n] = alpha[j,n-1] - RealLT[j,n];
       u[j,n] = season_n[j,n] + alpha[j,n-1] + beta*u[j,n-1];// + sd_y*normal_rng(0,1); 
 //      y[j,n] = season_n[j,n] + alpha[j,n-1] + beta*y[j,n-1] - delta*RealST[j,n-1] + RealST[j,n] + sd_y*normal_rng(0,1); 
 //      y[j,n] = alpha[j,n-1] + beta*y[j,n-1] - delta*RealST[j,n-1] + RealST[j,n] + sd_y * err_y[j,n]; 
@@ -123,7 +123,7 @@ RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
 
 // Perhaps best to model y as always positive, with IsCost = 1, 0 to indicate Cost or Rev item 
     for (n in 1:N) {
-      y[j,n] = u[j,n] + RealST[j,n] + normal_rng(0, sd_y);
+      y[j,n] = u[j,n] + normal_rng(0, sd_y);//+ RealST[j,n] 
       }
 
     mu_base[j] = (1)*mean( fabs(y[j]) ); // abs() has a kink at zero
