@@ -100,7 +100,8 @@ vector[N] zeta[J]; // temptation to manage current-period real earnings upward
       //RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
 //RealST[j] = rho_ST * inv_logit( (-1)*zeta[j] );
       //RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
-RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
+RealLT[j] = ( log1p_exp((-rho_LT)*zeta[j]) - log1p_exp((-rho_LT)*(zeta[j]+1)) )/rho_LT;
+//RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
 
 //Rm[j] = RealST[j] + sd_Rm * err_Rm[j];
 //Rm[j] = RealST[j];
@@ -138,10 +139,12 @@ base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
 
 //=======================================================    
 // test this again after RealST is included:    
-    alpha[j,1] = mu_alpha - RealLT[j,1]; 
+//    alpha[j,1] = mu_alpha - RealLT[j,1]; 
+    alpha[j,1] = mu_alpha * RealLT[j,1]; 
 //    alpha[j,2:N] = alpha[j,1:(N-1)];// - RealLT[j,2:N]; 
     for (n in 2:N) { 
-      alpha[j,n] = alpha[j,n-1] - RealLT[j,n]; 
+//      alpha[j,n] = alpha[j,n-1] - RealLT[j,n]; 
+      alpha[j,n] = alpha[j,n-1] * RealLT[j,n]; 
       }
 //=======================================================      
       

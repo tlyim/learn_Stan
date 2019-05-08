@@ -44,7 +44,7 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-J = 25#20 #200     # number of firms
+J = 5#20 #200     # number of firms
 N = 4*10#5#15 #10 #20  #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -67,11 +67,12 @@ y_init = 3*y_LT # initial y for data simulation set to three times of the LT sta
 
 # ST and LT impact coeff. of real EM
 rho_ST = 0.1
-rho_LT = 0.5*mu_alpha  # ; =0 will remove the LT impact
+rho_LT = 5  # ; =0 will remove the LT impact
+#rho_LT = 0.5*mu_alpha  # ; =0 will remove the LT impact
 
 # parameters of the data generation process of the temptation to do real EM
-#p = c(0.5, -0.8, 2.5)
-p = c(-4, -1, 3.5)
+#p = c(-4, -1, 3.5)
+p = c(-4.2, -1, 3.5)
 I = length(p)
 #pvec <- matrix(data = p, nrow = I)  # define column vector as a matrix[N,1]
 #Z.l[[3]]%*%p %>%  str()  #ok with p as will be converted accordingly
@@ -220,22 +221,27 @@ q <- extract(simu_fit)$q[1,]
       #   t() %>%
       #   split(col(.)) %>%
       #   lapply(as.vector)
-      # 
-      # RealLT.l <- extract(simu_fit)$RealLT[1,,] %>%
-      #   t() %>%
-      #   split(col(.)) %>%
-      #   lapply(as.vector)
-      # 
-      # #lapply(Z.l, (function(x) x%*%p))
       # RealST.l
       # lapply(RealST.l, mean) %>% unlist() %>%  mean()
-      # y.mat %>%  mean()
-      # D.mat %>%  mean()
-      # m.mat %>%  mean()
-      # RealLT.l
-      # lapply(RealLT.l, mean) %>% unlist() %>%  mean()
-      # m.mat
-      # lapply(r.l, mean) %>% unlist() %>%  mean()
+
+      RealLT.l <- extract(simu_fit)$RealLT[1,,] %>%
+round(3) %>% 
+        t() %>%
+        split(col(.)) %>%
+        lapply(as.vector)
+      RealLT.l # %>% unlist() %>% round(5))
+      lapply(RealLT.l, mean) %>% unlist() %>%  mean()
+
+      #lapply(Z.l, (function(x) x%*%p))
+      y.mat
+      y.mat %>%  mean()
+      y.mat %>% abs() %>% mean()
+      D.mat %>%  mean()
+      D.mat %>% abs() %>% mean()
+      m.mat %>%  mean()
+      m.mat %>% abs() %>% mean()
+      m.mat
+      lapply(r.l, mean) %>% unlist() %>%  mean()
 
 
 # Prepare SSM data for estimation using MCMC
@@ -283,7 +289,7 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 8#2500#3000
+n_iter = 25#00#3000
 n_refresh = max(2, n_iter/10)
 #n_warmup = 1000
 n_warmup = n_iter/2 
