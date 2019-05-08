@@ -67,7 +67,7 @@ y_init = 3*y_LT # initial y for data simulation set to three times of the LT sta
 
 # ST and LT impact coeff. of real EM
 rho_ST = 0.1
-rho_LT = 5  # ; =0 will remove the LT impact
+rho_LT = 1.5#5  # ; =0 will remove the LT impact
 #rho_LT = 0.5*mu_alpha  # ; =0 will remove the LT impact
 
 # parameters of the data generation process of the temptation to do real EM
@@ -225,7 +225,7 @@ q <- extract(simu_fit)$q[1,]
       # lapply(RealST.l, mean) %>% unlist() %>%  mean()
 
 #       RealLT.l <- extract(simu_fit)$RealLT[1,,] %>%
-# round(3) %>% 
+# round(4) %>% 
 #         t() %>%
 #         split(col(.)) %>%
 #         lapply(as.vector)
@@ -433,8 +433,8 @@ plot(params.df$iter, params.df$beta, pch=16, cex=0.8, #col=c_dark,
 #====================================================
     # mu_alpha = 0.04; mu_alpha01 = 0.52 
     # beta = 0.6  
-# mu_u1 = 0.3, rho_ST = 0.1, rho_LT = 0.02,   #delta = 0.65,    
-    # p = c(-4, -1, 3.5)
+# mu_u1 = 0.3, rho_LT = 5, rho_ST = 0.1, #delta = 0.65,    
+    # p = c(-4.25, -1, 3.5)
     # g = c(0.5, -0.8, 2.5)
     # w = c(-3.5, 7, 2)
     # d = c(0.05, 0.7, 0.25) 

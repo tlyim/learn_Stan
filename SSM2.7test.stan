@@ -182,7 +182,7 @@ model {
 //delta ~ normal(0, 2.5);//cauchy(0, 5);//
 //rho_ST ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
 //rho_ST ~ exponential(0.1);// uniform(0,0.2);
-rho_LT ~ normal(0, 10);//5);//1);//0.5);//0.125);// uniform(0,0.2);
+rho_LT ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
 
 sd_pi ~ normal(0, 10);//1);//0.125);//cauchy(0, 5);//
 	sd_gamma ~ normal(0, 10);//1);//0.125);//cauchy(0, 5);//
