@@ -45,7 +45,7 @@ options(mc.cores = parallel::detectCores())  #
 ```{r}
 
 J = 5#20 #200     # number of firms
-N = 4*15#5#15 #10 #20  #number of (quarterly) observations of a firm
+N = 2*15#5#15 #10 #20  #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_season = c(-0.03, -0.06, 0.05)
@@ -283,11 +283,11 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 80#0#500#0#3000
+n_iter = 4#2500#0#3000
 n_refresh = max(2, n_iter/10)
 #n_warmup = 1000
 n_warmup = n_iter/2 
-n_chains = 4#8
+n_chains = 1#4#8
 
 
 
@@ -336,7 +336,7 @@ fit2 <- fit1
 ```{r}
 
 ss_complete_pool <- extract(fit2);
-print(fit2, c("mu_alpha", "beta", "mu_u1", "rho_ST", "rho_LT", #"delta", 
+print(fit2, c("mu_alpha", "beta", "mu_u1", "rho_ST", #"rho_LT", #"mu_u1", #"delta", 
               "p", "g", "w", "d", "mu_season", "sd_season",
               "sd_pi", "sd_y", "sd_gamma", "sd_omega", "sd_base"),
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
@@ -366,8 +366,8 @@ pairs_stan(1, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
 pairs_stan(2, fit2, c("mu_alpha", "beta", "sd_y", "sd_gamma", "g"))
 pairs_stan(1, fit2, c("sd_season", "mu_season"))
 pairs_stan(2, fit2, c("sd_season", "mu_season"))
-pairs_stan(1, fit2, c("mu_u1", "rho_ST", "rho_LT", "sd_pi", "p"))#"delta", 
-pairs_stan(2, fit2, c("mu_u1", "rho_ST", "rho_LT", "sd_pi", "p"))#"delta", 
+pairs_stan(1, fit2, c("mu_u1", "rho_ST", "sd_pi", "p"))#"delta", "rho_LT", 
+pairs_stan(2, fit2, c("mu_u1", "rho_ST", "sd_pi", "p"))#"delta", "mu_u1", "rho_LT", 
 pairs_stan(1, fit2, c("sd_base", "sd_omega", "w", "d"))
 pairs_stan(2, fit2, c("sd_base", "sd_omega", "w", "d"))
 
@@ -384,8 +384,8 @@ plot(params.df$iter, params.df$mu_u1, pch=16, cex=0.8, #col=c_dark,
      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$rho_ST, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
-plot(params.df$iter, params.df$rho_LT, pch=16, cex=0.8, #col=c_dark, 
-    xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
+#plot(params.df$iter, params.df$rho_LT, pch=16, cex=0.8, #col=c_dark, 
+#    xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$sd_pi, pch=16, cex=0.8, #col=c_dark, 
      xlab="Iteration")#, ylab="log(tau)", ylim=c(-6, 4))
 plot(params.df$iter, params.df$sd_season, pch=16, cex=0.8, #col=c_dark, 

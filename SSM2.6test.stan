@@ -32,7 +32,7 @@ parameters {
   real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
 //  real<lower=0> delta; // slope coefficient of the AR(1) process of y[n]
 real<lower=0> rho_ST; // coeff. of the ST impact of real EM
-real<lower=0> rho_LT; // coeff. of the LT impact of real EM
+//real<lower=0> rho_LT; // coeff. of the LT impact of real EM
   vector[I] p; // coefficients of the K covariates in matrix Z
   vector[K] g; // coefficients of the K covariates in matrix X
   vector[H] w; // coefficients of the H covariates in matrix G
@@ -92,15 +92,15 @@ mu_alpha = 2*mu_alpha01 - 1;
 vector[N] chi[J]; // 
 vector[N] base[J];  // ,upper=1
 vector[N] zeta[J]; // temptation to manage current-period real earnings upward
-vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
+//vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
 
 
 // Define the sT and LT impacts of real EM 
    zeta[j] = Z[j]*(p + sd_pi*err_pi[j]);  // temptation to manage current-period real earnings upward
-//RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
+      //RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
 RealST[j] = rho_ST * inv_logit( (-1)*zeta[j] );
-//RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
-RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
+      //RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
+//RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
 
 //Rm[j] = RealST[j] + sd_Rm * err_Rm[j];
 //Rm[j] = RealST[j];
@@ -138,15 +138,15 @@ base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
 
     
 // test this again after RealST is included:    
-    alpha[j,1] = mu_alpha - RealLT[j,1];// + sd_alpha * err_alpha[j,1];
-//    alpha[j,2:N] = alpha[j,1:(N-1)];// - RealLT[j,2:N];// + sd_alpha * err_alpha[j,2:N];
+    alpha[j,1] = mu_alpha;// - RealLT[j,1]; 
+//    alpha[j,2:N] = alpha[j,1:(N-1)];// - RealLT[j,2:N]; 
     for (n in 2:N) { 
-      alpha[j,n] = alpha[j,n-1] - RealLT[j,n];// + sd_alpha * err_alpha[j,n];
+      alpha[j,n] = alpha[j,n-1];// - RealLT[j,n]; 
       }
       
       
 //NOte: ( )* controls whether and how much y_LT affects u[j,1] 
-u[j,1] = season_n[j,1] + mu_u1 + sd_y*err[j];
+u[j,1] = season_n[j,1] + sd_y*err[j] + mu_u1 ;
     for (n in 2:N) { 
       u[j,n] = season_n[j,n] + alpha[j,n-1] + beta*u[j,n-1];
 //      u[j,2:N] = season_n[j,2:N] + alpha[j,1:(N-1)] + beta*u[j,1:(N-1)];
@@ -176,25 +176,24 @@ model {
 // sd_pi ~ normal(0, 10);//cauchy(0, 5);//
   
 //delta ~ normal(0, 2.5);//cauchy(0, 5);//
-rho_ST ~ normal(0, 10);//5);//1);//0.5);//0.125);// uniform(0,0.2);
+rho_ST ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
 //rho_ST ~ exponential(0.1);// uniform(0,0.2);
-//rho_LT ~ exponential(20);// uniform(0,0.2);
-rho_LT ~ normal(0, 10);//5);//1);//0.5);//0.125);// uniform(0,0.2);
+//rho_LT ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
 
-sd_pi ~ normal(0, 1);//0.125);//cauchy(0, 5);//
-	sd_gamma ~ normal(0, 1);//0.125);//cauchy(0, 5);//
-	sd_omega ~ normal(0, 1);//0.125);//cauchy(0, 5);//
-  sd_season ~ normal(0, 1);//0.125);//cauchy(0, 5);//
+sd_pi ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
+	sd_gamma ~ normal(0, 5);//1);//0.125);//cauchy(0, 5);//
+	sd_omega ~ normal(0, 5);//1);//0.125);//cauchy(0, 5);//
+  sd_season ~ normal(0, 5);//1);//0.125);//cauchy(0, 5);//
   
-mu_u1 ~ normal(0, 10); //  10); //0.2); // 
+mu_u1 ~ normal(0, 1); //  10); //0.2); // 
+
 //  mu_alpha01 ~ beta(3*mu_alpha01_init, 3*(1-mu_alpha01_init));
 //  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init)); 
   mu_season ~ normal(0, 10); //  10); //0.2); //  
-  p ~ normal(0, 10); //  10); //0.2); //  
-  g ~ normal(0, 10);//0); //0.2); // g_init
-  w ~ normal(0, 10);//0); //0.2); //1);  // w_init
+  p ~ normal(0, 10);//10); //  10); //0.2); //  
+  g ~ normal(0, 10);//10);//0); //0.2); // g_init
+  w ~ normal(0, 10);//10);//0); //0.2); //1);  // w_init
   
-
 //  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
 
   for (j in 1:J) { 
