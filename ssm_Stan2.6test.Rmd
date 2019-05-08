@@ -44,7 +44,7 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-J = 5#20 #200     # number of firms
+J = 15#20 #200     # number of firms
 N = 4*15#5#15 #10 #20  #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -283,7 +283,7 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 80#0#500#0#3000
+n_iter = 500#0#3000
 n_refresh = max(2, n_iter/10)
 #n_warmup = 1000
 n_warmup = n_iter/2 
@@ -311,7 +311,7 @@ file = "SSM2.6test.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.9999, 
+  control = list(adapt_delta = 0.999, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
