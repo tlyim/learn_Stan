@@ -28,23 +28,27 @@ real rho_LT_init;
 transformed data {
 }
 parameters {
-  real<lower=0.5,upper=1> mu_alpha01; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
-  real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
+  real mu_alpha01; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+  real beta; // slope coefficient of the AR(1) process of y[n]
+//  real<lower=0,upper=1> mu_alpha01; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+//  real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
   vector[I] p; // coefficients of the K covariates in matrix Z
   vector[K] g; // coefficients of the K covariates in matrix X
   vector[H] w; // coefficients of the H covariates in matrix G
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 
 real mu_u1;
+//real<lower=-1,upper=1>  mu_u1;
 vector[N] err[J];  // error term in p
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
-  real<lower=0> sd_gamma; // sd of the hyperprior for gamma
-  real<lower=0> sd_omega; // sd of the hyperprior for omega
   real<lower=0> sd_base; // sd of the hyperprior for gamma
   real<lower=0,upper=1> mu_base[J]; // sd of the hyperprior for gamma
   vector[N] err_log_base[J];
-  vector[K] err_gamma[J];
-  vector[H] err_omega[J];
+//===============================================================================
+//  real<lower=0> sd_gamma; // sd of the hyperprior for gamma
+//  real<lower=0> sd_omega; // sd of the hyperprior for omega
+//  vector[K] err_gamma[J];
+//  vector[H] err_omega[J];
 //===============================================================================
 //real<lower=0> rho_ST; // coeff. of the ST impact of real EM
 //real<lower=0> rho_LT; // coeff. of the LT impact of real EM
@@ -112,8 +116,10 @@ vector[N] chi[J]; //
 
 // Define the raw (m) and net (D) accrual-based EM
 base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
-    tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
-    chi[j] = G[j]*(w + sd_omega*err_omega[j]);
+//===============================================================================
+    tau[j] = X[j]*(g);// + sd_gamma*err_gamma[j]);  // temptation to misreport
+    chi[j] = G[j]*(w);// + sd_omega*err_omega[j]);
+//===============================================================================
 
 //    vector[N] b[J]; // bias effort driven by the temptation to misreport //<lower=-1,upper=1>
 //    vector[N] P[J];  // potential room of manipulation constrained by governance mechanisms //<lower=0>
@@ -151,13 +157,14 @@ base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
       
 //NOte: ( )* controls whether and how much y_LT affects u[j,1] 
 u[j,1] = mu_u1 + sd_y*err[j,1]; //season_n[j,1] + 
+//=======================================================      
     for (n in 2:N) { 
       u[j,n] = mu_alpha + beta*u[j,n-1] + sd_y*err[j,n];//season_n[j,n] + 
 //      u[j,n] = alpha[j,n-1] + beta*u[j,n-1] + sd_y*err[j,n];//season_n[j,n] + 
 //      u[j,n] = season_n[j,n] + mu_alpha + beta*u[j,n-1];
     }
 
-    u[j] = r[j] - D[j];// - RealST[j];
+    u[j] = r[j];// - D[j];// - RealST[j];
     
   }
 
@@ -177,18 +184,23 @@ model {
 
 // priors 
 
-	sd_gamma ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
-	sd_omega ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
   	sd_y ~ normal(0, 1);//cauchy(0, 5);//
   sd_base ~ normal(0, 1);//cauchy(0, 5);//
 
 mu_u1 ~ normal(0, 1); //  10); //0.2); // 
 
+
+
+mu_alpha01 ~ normal(0.5, 0.5);
+beta ~ normal(0.5, 0.5);
 //  mu_alpha01 ~ beta(3*mu_alpha01_init, 3*(1-mu_alpha01_init));
 //  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init)); 
   p ~ normal(0, 10);//10); //  10); //0.2); //  
   g ~ normal(0, 10);//10);//0); //0.2); // g_init
   w ~ normal(0, 10);//10);//0); //0.2); //1);  // w_init
+//=======================================================================================
+//	sd_gamma ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
+//	sd_omega ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
 //=======================================================================================
 //rho_ST ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
 //rho_LT ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
@@ -209,10 +221,10 @@ mu_u1 ~ normal(0, 1); //  10); //0.2); //
 
 err[j] ~ normal(0, 1);
     err_log_base[j] ~ normal(0, 1);
-     err_gamma[j] ~ normal(0, 1);
-    err_omega[j] ~ normal(0, 1);
-
 //=======================================================================================
+//     err_gamma[j] ~ normal(0, 1);
+//    err_omega[j] ~ normal(0, 1);
+
 //    err_pi[j] ~ normal(0, 1);
 //   season_raw[j] ~ normal(mu_season, sd_season);
 //=======================================================================================
