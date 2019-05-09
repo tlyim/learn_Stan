@@ -28,11 +28,8 @@ real rho_LT_init;
 transformed data {
 }
 parameters {
-  real<lower=0,upper=1> mu_alpha01; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+  real<lower=0.5,upper=1> mu_alpha01; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
-//  real<lower=0> delta; // slope coefficient of the AR(1) process of y[n]
-//real<lower=0> rho_ST; // coeff. of the ST impact of real EM
-real<lower=0> rho_LT; // coeff. of the LT impact of real EM
   vector[I] p; // coefficients of the K covariates in matrix Z
   vector[K] g; // coefficients of the K covariates in matrix X
   vector[H] w; // coefficients of the H covariates in matrix G
@@ -41,47 +38,54 @@ real<lower=0> rho_LT; // coeff. of the LT impact of real EM
 real mu_u1;
 vector[N] err[J];  // error term in p
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
-  real<lower=0> sd_pi; // sd of the hyperprior for pi
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
   real<lower=0> sd_omega; // sd of the hyperprior for omega
   real<lower=0> sd_base; // sd of the hyperprior for gamma
   real<lower=0,upper=1> mu_base[J]; // sd of the hyperprior for gamma
   vector[N] err_log_base[J];
-
-  vector[I] err_pi[J];  // error term in p
-  vector[H] err_omega[J];
   vector[K] err_gamma[J];
+  vector[H] err_omega[J];
+//===============================================================================
+//real<lower=0> rho_ST; // coeff. of the ST impact of real EM
+//real<lower=0> rho_LT; // coeff. of the LT impact of real EM
+//  real<lower=0> sd_pi; // sd of the hyperprior for pi
+//  vector[I] err_pi[J];  // error term in p
 //vector[N] err_season[J];  
-//real<lower=0> sd_season; // sd of the underlying unbiased figures (vector y)
-vector[Q-1] season_raw[J];
-vector[Q-1] mu_season;
-real<lower=0> sd_season; // sd of the hyperprior for pi
+//vector[Q-1] season_raw[J];
+//vector[Q-1] mu_season;
+//real<lower=0> sd_season; // sd of the hyperprior for pi
+//===============================================================================
 
 // real<lower=0,upper=1> integrity;     // integrity level of the society affecting the decision to misreport or not
 //  vector[N] integrity;     // integrity level of each CEO affecting the decision to misreport or not
 }
 transformed parameters {
-//  vector[N] err_rm[J];  // error term in p
 vector[N] u[J];
 //  vector[N] y[J];
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] D[J];
-//vector[N] Rm[J]; // misreporting extent in the reported figures 
 //vector[N] RealST[J]; // ST impact of real EM on y[j,n]
-vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
-vector[N] alpha[J]; // underlying unbiased figure (scaled by Rev, total revenue)
-  real<lower=-1,upper=1> mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+//===============================================================================
+//vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
+//vector[N] alpha[J]; // underlying unbiased figure (scaled by Rev, total revenue)
+//  real<lower=0,upper=1> mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+//===============================================================================
+  real mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
 
+
+//===============================================================================
 // Define seasaonality component
-vector[Q] season_q[J];
-vector[N] season_n[J];
+//vector[Q] season_q[J];
+//vector[N] season_n[J];
 
-  for (j in 1:J) {
-    season_q[j] = append_row( season_raw[j], -sum(season_raw[j]) );
-    for (n in 1:N) {   
-      season_n[j,n] = season_q[j,q[n]];
-      }
-    }
+//  for (j in 1:J) {
+//    season_q[j] = append_row( season_raw[j], -sum(season_raw[j]) );
+//    for (n in 1:N) {   
+//      season_n[j,n] = season_q[j,q[n]];
+//      }
+//    }
+//===============================================================================
+
 
 // Define (-1,1)-bounded mean alpha as a transformation of the (0,1)-bounded mean alpha01
 mu_alpha = 2*mu_alpha01 - 1;
@@ -89,27 +93,27 @@ mu_alpha = 2*mu_alpha01 - 1;
 
 // Define the components of real and accrual-based EM 
   for (j in 1:J) {  
+vector[N] base[J];  // ,upper=1
     vector[N] tau[J]; // temptation to misreport
 vector[N] chi[J]; // 
-vector[N] base[J];  // ,upper=1
-vector[N] zeta[J]; // temptation to manage current-period real earnings upward
 
 
+//===============================================================================
+//vector[N] zeta[J]; // temptation to manage current-period real earnings upward
 // Define the sT and LT impacts of real EM 
-   zeta[j] = Z[j]*(p + sd_pi*err_pi[j]);  // temptation to manage current-period real earnings upward
+//   zeta[j] = Z[j]*(p + sd_pi*err_pi[j]);  // temptation to manage current-period real earnings upward
+//RealLT[j] = ( log1p_exp((-rho_LT)*zeta[j]) - log1p_exp((-rho_LT)*(zeta[j]+1)) )/rho_LT;
+//===============================================================================
+//RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
+      //RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
       //RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
 //RealST[j] = rho_ST * inv_logit( (-1)*zeta[j] );
-      //RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
-RealLT[j] = ( log1p_exp((-rho_LT)*zeta[j]) - log1p_exp((-rho_LT)*(zeta[j]+1)) )/rho_LT;
-//RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
 
-//Rm[j] = RealST[j] + sd_Rm * err_Rm[j];
-//Rm[j] = RealST[j];
 
 // Define the raw (m) and net (D) accrual-based EM
+base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
     tau[j] = X[j]*(g + sd_gamma*err_gamma[j]);  // temptation to misreport
     chi[j] = G[j]*(w + sd_omega*err_omega[j]);
-base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
 
 //    vector[N] b[J]; // bias effort driven by the temptation to misreport //<lower=-1,upper=1>
 //    vector[N] P[J];  // potential room of manipulation constrained by governance mechanisms //<lower=0>
@@ -139,21 +143,18 @@ base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
 
 //=======================================================    
 // test this again after RealST is included:    
-//    alpha[j,1] = mu_alpha - RealLT[j,1]; 
-    alpha[j,1] = mu_alpha * RealLT[j,1]; 
-//    alpha[j,2:N] = alpha[j,1:(N-1)];// - RealLT[j,2:N]; 
-    for (n in 2:N) { 
-//      alpha[j,n] = alpha[j,n-1] - RealLT[j,n]; 
-      alpha[j,n] = alpha[j,n-1] * RealLT[j,n]; 
-      }
+//    alpha[j,1] = mu_alpha;// * RealLT[j,1]; 
+//    for (n in 2:N) { 
+//      alpha[j,n] = alpha[j,n-1];// * RealLT[j,n]; 
+//      }
 //=======================================================      
       
 //NOte: ( )* controls whether and how much y_LT affects u[j,1] 
-u[j,1] = season_n[j,1] + mu_u1 + sd_y*err[j,1];
+u[j,1] = mu_u1 + sd_y*err[j,1]; //season_n[j,1] + 
     for (n in 2:N) { 
-      u[j,n] = season_n[j,n] + alpha[j,n-1] + beta*u[j,n-1] + sd_y*err[j,n];
+      u[j,n] = mu_alpha + beta*u[j,n-1] + sd_y*err[j,n];//season_n[j,n] + 
+//      u[j,n] = alpha[j,n-1] + beta*u[j,n-1] + sd_y*err[j,n];//season_n[j,n] + 
 //      u[j,n] = season_n[j,n] + mu_alpha + beta*u[j,n-1];
-//      u[j,2:N] = season_n[j,2:N] + alpha[j,1:(N-1)] + beta*u[j,1:(N-1)];
     }
 
     u[j] = r[j] - D[j];// - RealST[j];
@@ -165,50 +166,6 @@ u[j,1] = season_n[j,1] + mu_u1 + sd_y*err[j,1];
 }
 model {
 
-// priors 
-//	sd_y ~ cauchy(0, 5);//normal(0, 1);//
-//sd_pi ~ cauchy(0, 5);//normal(0, 1);//
-//	sd_gamma ~ cauchy(0, 5);//normal(0, 1);//
-//	sd_omega ~ cauchy(0, 5);//normal(0, 1);//
-//  sd_base ~ cauchy(0, 5);//normal(0, 1);//
-//delta ~ normal(0, 10);//cauchy(0, 5);//
-//sd_Rm ~ normal(0, 10);//cauchy(0, 5);//
-  	sd_y ~ normal(0, 10);//cauchy(0, 5);//
-  sd_base ~ normal(0, 10);//cauchy(0, 5);//
-// 	sd_gamma ~ normal(0, 10);//cauchy(0, 5);//
-// 	sd_omega ~ normal(0, 10);//cauchy(0, 5);//
-// sd_pi ~ normal(0, 10);//cauchy(0, 5);//
-  
-//delta ~ normal(0, 2.5);//cauchy(0, 5);//
-//rho_ST ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
-//rho_ST ~ exponential(0.1);// uniform(0,0.2);
-rho_LT ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
-
-sd_pi ~ normal(0, 10);//1);//0.125);//cauchy(0, 5);//
-	sd_gamma ~ normal(0, 10);//1);//0.125);//cauchy(0, 5);//
-	sd_omega ~ normal(0, 10);//1);//0.125);//cauchy(0, 5);//
-  sd_season ~ normal(0, 10);//1);//0.125);//cauchy(0, 5);//
-  
-mu_u1 ~ normal(0, 1); //  10); //0.2); // 
-
-//  mu_alpha01 ~ beta(3*mu_alpha01_init, 3*(1-mu_alpha01_init));
-//  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init)); 
-  mu_season ~ normal(0, 10); //  10); //0.2); //  
-  p ~ normal(0, 10);//10); //  10); //0.2); //  
-  g ~ normal(0, 10);//10);//0); //0.2); // g_init
-  w ~ normal(0, 10);//10);//0); //0.2); //1);  // w_init
-  
-//  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
-
-  for (j in 1:J) { 
-
-//    err_alpha[j] ~ normal(0, 1);
-//    err_Rm[j] ~ normal(0, 1);
-    err_pi[j] ~ normal(0, 1);
-    err_gamma[j] ~ normal(0, 1);
-    err_omega[j] ~ normal(0, 1);
-    err_log_base[j] ~ normal(0, 1);
-
 //=======================================================================================
 // Two options: 
 //(i) simply let y[j,1] be an unknown parameter to be best estimated to fit the data; a prior can be specified
@@ -218,28 +175,50 @@ mu_u1 ~ normal(0, 1); //  10); //0.2); //
 //y[j,1] ~ normal( season_n[j,1] + sd_season * err_season[j,1] + mu_alpha/(1-beta), sd_y );
 //=======================================================================================
 
-//y[j,2:N] = alpha[j,1:(N - 1)] + beta*(y[j,1:(N - 1)] - RealST[j,1:(N - 1)]) + RealST[j,2:N]; 
-//      y[j,2:N] ~ normal(mu_alpha + beta *( y[j,1:(N-1)] - RealST[j,1:(N - 1)] ) + RealST[j,2:N], sd_y);
-    season_raw[j] ~ normal(mu_season, sd_season);
-    
-//u[j,1] ~ normal(0, 0.08);
-//u[j,1] ~ normal(season_n[j,1], sd_y);
-//    u[j,1] ~ normal(season_n[j,1] + mu_alpha/(1-beta), sd_y);
+// priors 
+
+	sd_gamma ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
+	sd_omega ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
+  	sd_y ~ normal(0, 1);//cauchy(0, 5);//
+  sd_base ~ normal(0, 1);//cauchy(0, 5);//
+
+mu_u1 ~ normal(0, 1); //  10); //0.2); // 
+
+//  mu_alpha01 ~ beta(3*mu_alpha01_init, 3*(1-mu_alpha01_init));
+//  beta ~ beta(5.5*beta_init, 5.5*(1-beta_init)); 
+  p ~ normal(0, 10);//10); //  10); //0.2); //  
+  g ~ normal(0, 10);//10);//0); //0.2); // g_init
+  w ~ normal(0, 10);//10);//0); //0.2); //1);  // w_init
+//=======================================================================================
+//rho_ST ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
+//rho_LT ~ normal(0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
+//rho_LT ~ student_t(3, 0, 1);//5);//1);//0.5);//0.125);// uniform(0,0.2);
+//sd_pi ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
+//  sd_season ~ normal(0, 1);//1);//0.125);//cauchy(0, 5);//
+//  mu_season ~ normal(0, 10); //  10); //0.2); //  
+//  mu_season ~ student_t(3, 0, 1); //  10); //0.2); //  
+//=======================================================================================
+//  p ~ student_t(3, 0, 1);//10); //  10); //0.2); //  
+//  g ~ student_t(3, 0, 1);//10);//0); //0.2); // g_init
+//  w ~ student_t(3, 0, 1);//10);//0); //0.2); //1);  // w_init
+
+  
+//  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
+
+  for (j in 1:J) { 
 
 err[j] ~ normal(0, 1);
-//    err_rm[j] ~ normal(0, sd_y);
-//    r[j] ~ normal( u[j] + Rm[j] + D[j], sd_y );
+    err_log_base[j] ~ normal(0, 1);
+     err_gamma[j] ~ normal(0, 1);
+    err_omega[j] ~ normal(0, 1);
+
+//=======================================================================================
+//    err_pi[j] ~ normal(0, 1);
+//   season_raw[j] ~ normal(mu_season, sd_season);
+//=======================================================================================
     
+  
     
-    
-//u[j,2:N] ~ normal( season_n[j,2:N] + //sd_season * err_season[j,2:N]
-//                          alpha[j,1:(N-1)] + beta*u[j,1:(N-1)], sd_y );
-//
-//    y[j,2:N] ~ normal( season_n[j,2:N] + //sd_season * err_season[j,2:N]
-//                          alpha[j,1:(N-1)] + beta*y[j,1:(N-1)] +
-//                          delta*RealST[j,1:(N-1)] + RealST[j,2:N], sd_y );
-//
-//    y[j,2:N] ~ normal(alpha[j,1:N-1] + beta * y[j,1:N-1], sd_alpha);
 
   }
 //  M ~ bernoulli_logit(ilogodds); 

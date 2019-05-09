@@ -44,7 +44,7 @@ options(mc.cores = parallel::detectCores())  #
 # Simulate data and fit the debug model (also, save Stan model objects) 
 ```{r}
 
-J = 25#20 #200     # number of firms
+J = 15#45#20 #200     # number of firms
 N = 4*10#5#15 #10 #20  #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -67,12 +67,12 @@ y_init = 3*y_LT # initial y for data simulation set to three times of the LT sta
 
 # ST and LT impact coeff. of real EM
 rho_ST = 0.1
-rho_LT = 1.5#5  # ; =0 will remove the LT impact
+rho_LT = 2#5  # ; =0 will remove the LT impact
 #rho_LT = 0.5*mu_alpha  # ; =0 will remove the LT impact
 
 # parameters of the data generation process of the temptation to do real EM
 #p = c(-4, -1, 3.5)
-p = c(-4.25, -1, 3.5)
+p = c(-4.5, -1, 3.5)
 I = length(p)
 #pvec <- matrix(data = p, nrow = I)  # define column vector as a matrix[N,1]
 #Z.l[[3]]%*%p %>%  str()  #ok with p as will be converted accordingly
@@ -225,22 +225,22 @@ q <- extract(simu_fit)$q[1,]
       # lapply(RealST.l, mean) %>% unlist() %>%  mean()
 
 #       RealLT.l <- extract(simu_fit)$RealLT[1,,] %>%
-# round(4) %>% 
+# round(3) %>%
 #         t() %>%
 #         split(col(.)) %>%
 #         lapply(as.vector)
 #       RealLT.l # %>% unlist() %>% round(5))
-#       lapply(RealLT.l, mean) %>% unlist() %>%  mean()
-# 
-#       #lapply(Z.l, (function(x) x%*%p))
-#       y.mat
+# #       lapply(RealLT.l, mean) %>% unlist() %>%  mean()
+# # 
+# #       #lapply(Z.l, (function(x) x%*%p))
+# #       y.mat
 #       y.mat %>%  mean()
 #       y.mat %>% abs() %>% mean()
 #       D.mat %>%  mean()
 #       D.mat %>% abs() %>% mean()
 #       m.mat %>%  mean()
 #       m.mat %>% abs() %>% mean()
-#       m.mat
+# #       m.mat
 #       lapply(r.l, mean) %>% unlist() %>%  mean()
 
 
@@ -289,19 +289,19 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 1800#3000
+n_iter = 2500#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 1000
+n_warmup = 1500
 #n_warmup = n_iter/2 
 n_chains = 4#8
 
 
 
 initf2 <- function(chain_id = 1) {
-  list(mu_alpha01 = mu_alpha01, beta = beta, # alpha = alpha, 
+  list(mu_alpha01 = mu_alpha01, beta = beta,  
        p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
        mu_u1 = y_init, #u = array(y_LT, dim = c(J,N)),
-       rho_ST = rho_ST, rho_LT = rho_LT, sd_pi = sd_pi, #sd_Rm = sd_Rm, #delta = delta,  
+       rho_ST = rho_ST, rho_LT = rho_LT, sd_pi = sd_pi,    
        sd_y = sd_y, sd_base = sd_base, sd_gamma = sd_gamma, sd_omega = sd_omega)
   }
 # generate a list of lists to specify initial values
@@ -317,7 +317,7 @@ file = "SSM2.7test.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.9999, 
+  control = list(adapt_delta = 0.99, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -331,6 +331,7 @@ file = "SSM2.7test.stan",  # Stan program
 })
 
 fit2 <- fit1
+save(fit2 , file="fit2.rda")#file="~/fit2.rda")
 # beepr::beep()
 
 #extract(fit1)$y[1,]
@@ -341,7 +342,6 @@ fit2 <- fit1
 # Summary of the posterior sample 
 ```{r}
 
-save(fit2 , file="fit2.rda")#file="~/fit2.rda")
 ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_alpha", "beta", "mu_u1", "rho_LT", #"rho_ST", #"mu_u1", #"delta", 
               "p", "g", "w", "d", "mu_season", "sd_season",
