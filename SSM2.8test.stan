@@ -29,7 +29,8 @@ transformed data {
 }
 parameters {
 //  real<lower=0,upper=1> mu_alpha01; // intercept coeff of the AR(1) process of the unbiased figure   
-real<lower=0.5,upper=1> mu_alpha01; // intercept coeff of the AR(1) process of the unbiased figure y[n]
+//real<lower=0.5,upper=1> mu_alpha01; // intercept coeff of the AR(1) process of the unbiased figure y[n]
+real log_mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
 //  real<lower=0> delta; // slope coefficient of the AR(1) process of y[n]
 //real<lower=0> rho_ST; // coeff. of the ST impact of real EM
@@ -70,9 +71,11 @@ vector[N] u[J];
   vector[N] D[J];
 //vector[N] Rm[J]; // misreporting extent in the reported figures 
 //vector[N] RealST[J]; // ST impact of real EM on y[j,n]
-vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
-vector[N] alpha[J]; // underlying unbiased figure (scaled by Rev, total revenue)
-  real<lower=-1,upper=1> mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+vector[N] log_RealLT[J]; // LT impact of real EM on alpha[j,n]
+//vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
+//vector[N] alpha[J]; // underlying unbiased figure (scaled by Rev, total revenue)
+vector[N] log_alpha[J]; // underlying unbiased figure (scaled by Rev, total revenue)
+real mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
 
 // Define seasaonality component
 vector[Q] season_q[J];
@@ -86,7 +89,9 @@ vector[N] season_n[J];
     }
 
 // Define (-1,1)-bounded mean alpha as a transformation of the (0,1)-bounded mean alpha01
-mu_alpha = 2*mu_alpha01 - 1;
+//mu_alpha = 2*mu_alpha01 - 1;
+//log_mu_alpha = log(mu_alpha);
+mu_alpha = exp(log_mu_alpha);
 
 
 // Define the components of real and accrual-based EM 
@@ -102,7 +107,8 @@ vector[N] zeta[J]; // temptation to manage current-period real earnings upward
       //RealST[j] = rep_vector(rho_ST, N) ./ ( 1 + exp((-1)*zeta[j]) );
 //RealST[j] = rho_ST * inv_logit( (-1)*zeta[j] );
       //RealLT[j] = rep_vector(rho_LT, N) ./ ( 1 + exp((-1)*zeta[j]) );
-RealLT[j] = ( log1p_exp((-rho_LT)*zeta[j]) - log1p_exp((-rho_LT)*(zeta[j]+1)) )/rho_LT;
+log_RealLT[j] = log( log1p_exp((-rho_LT)*zeta[j]) - log1p_exp((-rho_LT)*(zeta[j]+1)) ) - log(rho_LT);
+//RealLT[j] = ( log1p_exp((-rho_LT)*zeta[j]) - log1p_exp((-rho_LT)*(zeta[j]+1)) )/rho_LT;
 //RealLT[j] = rho_LT * inv_logit( (-1)*zeta[j] );
 
 //Rm[j] = RealST[j] + sd_Rm * err_Rm[j];
@@ -142,18 +148,18 @@ base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
 //=======================================================    
 // test this again after RealST is included:    
 //    alpha[j,1] = mu_alpha - RealLT[j,1]; 
-    alpha[j,1] = mu_alpha * RealLT[j,1]; 
+    log_alpha[j,1] = log_mu_alpha + log_RealLT[j,1]; 
 //    alpha[j,2:N] = alpha[j,1:(N-1)];// - RealLT[j,2:N]; 
     for (n in 2:N) { 
 //      alpha[j,n] = alpha[j,n-1] - RealLT[j,n]; 
-      alpha[j,n] = alpha[j,n-1] * RealLT[j,n]; 
+      log_alpha[j,n] = log_alpha[j,n-1] + log_RealLT[j,n]; 
       }
 //=======================================================      
       
 //NOte: ( )* controls whether and how much y_LT affects u[j,1] 
 u[j,1] = season_n[j,1] + mu_u1 + sd_y*err[j,1];
     for (n in 2:N) { 
-      u[j,n] = season_n[j,n] + alpha[j,n-1] + beta*u[j,n-1] + sd_y*err[j,n];
+      u[j,n] = season_n[j,n] + exp(log_alpha[j,n-1]) + beta*u[j,n-1] + sd_y*err[j,n];
 //      u[j,n] = season_n[j,n] + mu_alpha + beta*u[j,n-1];
 //      u[j,2:N] = season_n[j,2:N] + alpha[j,1:(N-1)] + beta*u[j,1:(N-1)];
     }
