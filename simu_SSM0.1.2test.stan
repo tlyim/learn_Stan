@@ -32,9 +32,10 @@ parameters {}
 model {}
 generated quantities {
 //  vector[N] alpha[J]; // LT profitability level coefficient for firm j in period n
+  vector[N] r[J]; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
   vector[N] y[J]; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
   vector[N] u[J]; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
-  vector[N] RealLT[J]; // LT impact of real EM on alpha[j,n]
+  vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
 
 
   vector[N] season_n[J];
@@ -59,25 +60,25 @@ generated quantities {
 
 
   for (j in 1:J) {
-    vector[I] err_pi[J];  // error term in p
+//    vector[N] err_pi[J];  // error term in p
     vector[N] zeta[J]; // temptation to manage current-period real earnings upward
 
-    for (i in 1:I) err_pi[j,i] = normal_rng(0,1);
+              //    for (i in 1:I) err_pi[j,i] = normal_rng(0,1);
 
-    zeta[j] = Z[j]*(p + sd_pi*err_pi[j]);  // temptation to manage current-period real earnings upward
-    RealLT[j] = ( log1p_exp((-rho)*zeta[j]) - log1p_exp((-rho)*(zeta[j]+1)) )/rho;
+    zeta[j] = Z[j]*p;// + sd_pi*normal_rng(0,1);  // temptation to manage current-period real earnings upward
+//    RealLT[j] = ( log1p_exp((-rho)*zeta[j]) - log1p_exp((-rho)*(zeta[j]+1)) )/rho;
+    Real[j] = (0.1)*inv_logit(zeta[j]);
+//    RealLT[j,n] = inv_logit((-1)*zeta[j]);
 
 
-    u[j,1] = season_n[j,1] + y_init + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
+    u[j,1] = season_n[j,1] + y_init;   // y should be nonnegative for Rev and nonpositive for Costs
+    r[j,1] = Real[j,1] + u[j,1] + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
     for (n in 2:N) {
-      u[j,n] = season_n[j,n] + mu_alpha*RealLT[j,n-1] + beta*u[j,n-1] + sd_y*normal_rng(0,1);
-//      u[j,n] = season_n[j,n] + mu_alpha + beta*u[j,n-1] + sd_y*normal_rng(0,1);
+      u[j,n] = season_n[j,n] + mu_alpha + beta*(r[j,n-1] - Real[j,n-1]);
+      r[j,n] = Real[j,n] + u[j,n] + sd_y*normal_rng(0,1);
       }
 
-
-    for (n in 1:N) {
-      y[j,n] = u[j,n]; 
-      }
+    y[j] = u[j]; 
 
     }
 
