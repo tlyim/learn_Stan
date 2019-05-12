@@ -27,7 +27,6 @@ parameters {
 //real alpha_ratio_raw; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
 
-real<lower=0,upper=1> sigma[J]; // slope coefficient of the AR(1) process of y[n]
 //  real<lower=0,upper=1> eta; // slope coefficient of the AR(1) process of y[n]
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
   vector[Q-1] season_raw[J];
@@ -48,8 +47,9 @@ transformed parameters {
   vector[Q] season_q[J];
   vector[N] season_n[J];
 vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
-vector<lower=0>[N] shape[J]; // shape = 0.5 means U-shaped dist of sigma; shape = 1 means uniform dist 
-real theta[J]; // slope coefficient of the AR(1) process of y[n]
+
+vector<lower=0,upper=1>[N] sigma[J]; // slope coefficient of the AR(1) process of y[n]
+vector[N] theta[J]; // slope coefficient of the AR(1) process of y[n]
 //real mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
 
   for (j in 1:J) {
@@ -73,7 +73,10 @@ real theta[J]; // slope coefficient of the AR(1) process of y[n]
 //===============================================================================
 
 
-shape[j] = exp(T[j]*s);
+// fraction of Real[j] that is sales-based, rather than RnD-based,
+//   where T indicates whether j is a retailer and has RnD spending or not reported in last period
+sigma[j] = inv_logit(T[j]*s);// + err_sigma[j]); 
+
 theta[j] = beta + sigma[j];
 //theta[j] = beta + sigma[j] + eta*(1-sigma[j]);
 
@@ -101,14 +104,12 @@ s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
 
   for (j in 1:J) { 
     
-sigma[j] ~ beta(mean(shape[j,1:N]), 1);// shape=1 is uniform; 0 < shape < 1: tend to have sigma -> 0; shape > 1: sigma -> 1  
-// shape to be modelled as T*s, 
-//   where T indicates whether j is a retailer and has RnD spending reported in last period or not
-// sigma can be alternatively modelled as {0,1}
+  for (n in 1:N)   
+
     season_raw[j] ~ normal(mu_season, sd_season);
     r[j,1] ~ normal(Real[j,1] + season_n[j,1] + mu_u1, sd_y);
 //    r[j,2:N] ~ normal(Real[j,2:N] + season_n[j,2:N] + mu_alpha + beta*(r[j,1:(N-1)] - Real[j,1:(N-1)]), sd_y); 
-    r[j,2:N] ~ normal(Real[j,2:N] + season_n[j,2:N] - theta[j]*Real[j,1:(N-1)] +
+    r[j,2:N] ~ normal(Real[j,2:N] + season_n[j,2:N] - theta[j,2:N] .* Real[j,1:(N-1)] +
                       mu_alpha + beta*r[j,1:(N-1)], 
                       sd_y); 
 //    r[j,2:N] ~ normal(Real[j,2:N] + season_n[j,2:N] - sigma*Real[j,1:(N-1)] +

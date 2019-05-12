@@ -37,7 +37,7 @@ generated quantities {
   vector[N] y[J]; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
   vector[N] u[J]; // underlying unbiased figures (eg, Gross Profit, scaled by Rev)
   vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
-    real sigma[J]; // temptation to manage current-period real earnings upward
+vector[N] sigma[J]; // slope coefficient of the AR(1) process of y[n]
 
   vector[N] season_n[J];
   vector[Q] season_q[J];
@@ -62,23 +62,23 @@ generated quantities {
   for (j in 1:J) {
 //    vector[N] err_pi[J];  // error term in p
     vector[N] zeta[J]; // temptation to manage current-period real earnings upward
-vector[N] shape[J]; // shape = 0.5 means U-shaped dist of sigma; shape = 1 means uniform dist 
-    real theta[J]; // temptation to manage current-period real earnings upward
+    vector[N] theta[J]; // temptation to manage current-period real earnings upward
 
     zeta[j] = Z[j]*p;// + sd_pi*normal_rng(0,1);  // temptation to manage current-period real earnings upward
     Real[j] = ( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
 //    Real[j] = (0.1)*inv_logit(zeta[j]);
 
 
-shape[j] = exp(T[j]*s);
-sigma[j] = beta_rng(mean(shape[j,1:N]), 1);
+// fraction of Real[j] that is sales-based, rather than RnD-based,
+//   where T indicates whether j is a retailer and has RnD spending or not reported in last period
+sigma[j] = inv_logit(T[j]*s);// + err_sigma[j]); 
 theta[j] = beta + sigma[j];
 
     u[j,1] = season_n[j,1] + y_init;   // y should be nonnegative for Rev and nonpositive for Costs
     r[j,1] = Real[j,1] + u[j,1] + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
     for (n in 2:N) {
       u[j,n] = season_n[j,n] + mu_alpha + beta*(r[j,n-1] - Real[j,n-1]);
-      r[j,n] = Real[j,n] + u[j,n] - (theta[j] - beta)*Real[j,n-1] + sd_y*normal_rng(0,1);
+      r[j,n] = Real[j,n] + u[j,n] - (theta[j,n] - beta) .* Real[j,n-1] + sd_y*normal_rng(0,1);
       }
 
     y[j] = u[j]; 

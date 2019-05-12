@@ -48,8 +48,8 @@ options(mc.cores = parallel::detectCores())  #
 # J=60,N=4*20 also seems to be acceptable
 # Can consider J=40,N=4*15 for model dev process only  
 #===========================================
-J = 60#32#45#20 #200     # number of firms
-N = 4*20#12#5#15   #number of (quarterly) observations of a firm
+J = 40#32#45#20 #200     # number of firms
+N = 4*15#12#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_season = c(-0.12, -0.06, 0.15)
@@ -259,15 +259,16 @@ Real.l <- extract(simu_fit)$Real[1,,] %>%
          split(col(.)) %>%
          lapply(as.vector)
        Real.l[[1]] # %>% unlist() %>% round(5))
-
-sigma.vec <- extract(simu_fit)$sigma[1,] %>%
+       
+cat("\n\n")
+sigma.l <- extract(simu_fit)$sigma[1,,] %>%
  round(3) %>%
          t() %>%
-         split(col(.)) %>%
-          unlist() %>% 
-          as.vector() 
-cat("\n\nmean(sigma): ", mean(sigma.vec), "\n\n")
-sigma.vec
+         split(col(.))  %>%
+         lapply(as.vector)
+       sigma.l[[1]] # %>% unlist() %>% round(5))
+cat("\n\nmean(sigma): ", mean(sigma.l %>% unlist() %>% as.vector()), "\n\n")
+
 # #       lapply(RealLT.l, mean) %>% unlist() %>%  mean()
 # # 
 # #       #lapply(Z.l, (function(x) x%*%p))
@@ -453,9 +454,20 @@ plot(params.df$iter, params.df$sd_season, pch=16, cex=0.8, #col=c_dark,
 #      xlab="Iteration")#, ylim=c(0, 0.2))#, ylab="log(tau)", ylim=c(-6, 4))
 
 
+
+    # traceplot(fit,
+    #           c("Omega", "alpha", "beta", "sigma_uv", "rho_uv",
+    #             "uv[1,1]", "uv[1,2]", "uv[30,1]", "uv[30,2]",
+    #             "lp__"),
+    #           inc_warmup=FALSE) +
+    #   coord_cartesian(xlim = c(3001,3200)) +
+    #   scale_x_continuous(breaks=c(3000, 3100, 3200))
+
+
+
 #====================================================
     # mu_u1 = y_init = 4; mu_alpha = 0.2; beta = 0.85;  
-# shape = 4; eta = 0.1; rho = 5,  
+# rho = 5,  
 # s = c(0.4, 0.7, 0.5) 
 # p = c(-3.0, 0.13, -0.37) [rho=5]; 
     # g = c(0.5, -0.8, 2.5)
