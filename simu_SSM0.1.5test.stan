@@ -27,6 +27,7 @@ real<lower=0> sd_season; // sd of the hyperprior for pi
   real<lower=0> sd_y; // sd of the hyperprior for alpha
   real<lower=0> sd_gamma; // sd of the hyperprior for gamma
   real<lower=0> sd_omega; // sd of the hyperprior for omega
+  real mu_base; // sd of the hyperprior for base
   real<lower=0> sd_base; // sd of the hyperprior for base
 }
 transformed data {
@@ -41,8 +42,9 @@ generated quantities {
   vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
 //vector[N] sigma[J]; // slope coefficient of the AR(1) process of y[n]
 
-vector<lower=0>[N] base[J];  // ,upper=1
-real mu_base[J];  // ,upper=1
+//vector<lower=0>[N] base[J];  // ,upper=1
+real<lower=0> base[J];  // ,upper=1
+//real mu_base[J];  // ,upper=1
 vector[N] b[J]; // bias effort driven by the temptation to misreport //<lower=-1,upper=1>
 vector[N] P[J];  // potential room of manipulation constrained by governance mechanisms //<lower=0>
 vector[N] m[J]; // misreporting extent in the reported figures 
@@ -91,7 +93,7 @@ vector[N] chi[J]; //
     for (n in 2:N) {
       u[j,n] = season_n[j,n] + mu_alpha + beta*u[j,n-1] + sd_y*normal_rng(0,1);
       }
-    y[j] = 0*Real[j] + u[j]; //assumed all real EM are RnD-based; thus, no shifted sales
+    y[j] = Real[j] + u[j]; //assumed all real EM are RnD-based; thus, no shifted sales
 
 
 //Work>>> ===============================================================================
@@ -108,18 +110,18 @@ vector[N] chi[J]; //
 //===============================================================================
 // Define accrual-based EM component
 // Define the raw (m) and net (D) accrual-based EM
-    mu_base[j] = (1)*mean( fabs(y[j]) );  // fabs() is floating-point abs()
-//    for (n in 1:N) {
-//      base[j,n] = exp( mu_base[j] + normal_rng(0, sd_base) );// sd_omega*err_omega[j]) ; // for debugging only
-//      base[j] = exp( 0.2 + 0.1*err_log_base[j] );
-//      }
+
+            //    mu_base[j] = (1)*mean( fabs(y[j]) );  // fabs() is floating-point abs()
+            //    for (n in 1:N) {
+            //      base[j,n] = exp( mu_base[j] + normal_rng(0, sd_base) );// sd_omega*err_omega[j]) ; // for debugging only
+            //      base[j] = exp( 0.2 + 0.1*err_log_base[j] );
+            //      }
 
     tau[j] = X[j]*(g);// + sd_gamma*err_gamma[j]);  // temptation to misreport
     chi[j] = -G[j]*(w);// + sd_omega*err_omega[j]);
 
-base[j] = rep_vector(0.2, N);
 //  for (n in 1:N) {
-//b[j,n] = 2*inv_logit(normal_rng(0,1)) - 1;
+base[j] = exp( mu_base + 0.15*normal_rng(0,1) );//rep_vector(0.2, N);//
 //    }
 
 b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
@@ -128,7 +130,7 @@ P[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
 //    b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
 //    P[j] = rep_vector(1, N) ./ ( 1 + exp(chi[j]) );
 //    bP[j] = (exp(tau[j]) - 1) ./ ( 1 + exp(tau[j]) + exp(chi[j]) + exp(tau[j]+chi[j]) );
-    m[j] = base[j] .* b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
+    m[j] = base[j] * b[j] .* P[j];  // extent of misreporting resulting from bias effort and 
 //    m[j] = ( base[j] .* (exp(tau[j]) - 1) ) ./ ( 1 + exp(tau[j]) + exp(chi[j]) + exp(tau[j]+chi[j]) );
 //===============================================================================
 //    D[j,1] = m[j,1];

@@ -49,8 +49,8 @@ simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 //
 //
 //real<lower=0> sd_base; // sd of the hyperprior for gamma
-//real<lower=0,upper=1> mu_base[J]; // sd of the hyperprior for gamma
-//vector[N] err_log_base[J];
+real mu_base;  
+real err_log_base[J];
 
 }
 transformed parameters {
@@ -73,7 +73,7 @@ vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the ke
 
 vector[N] tau[J]; // temptation to misreport
 vector[N] chi[J]; // 
-vector[N] base[J];  // ,upper=1
+real base[J];  // ,upper=1
 
     vector[N] zeta[J]; // temptation to manage current-period real earnings upward
 //===============================================================================
@@ -110,7 +110,7 @@ vector[N] base[J];  // ,upper=1
     chi[j] = -G[j]*(w);// + sd_omega*err_omega[j]);
 
 //base[j] = exp( mu_base[j] + sd_base*err_log_base[j] );
-base[j] = rep_vector(0.2, N);//exp( 0.2 + 0.1*err_log_base[j] );
+base[j] = exp( mu_base + 0.15*err_log_base[j] );//rep_vector(0.2, N);//
 
 b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
 //    b[j] = (exp(tau[j]) - 1) ./ (exp(tau[j]) + 1);
@@ -118,7 +118,7 @@ b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
 //    P[j] = inv_logit( (-1)*G[j]*(w) );  // + sd_omega*err_omega[j]
 P[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
 
-    m[j] = base[j] .* b[j] .* P[j];  // extent of misreporting resulting from bias effort 
+    m[j] = base[j] * b[j] .* P[j];  // extent of misreporting resulting from bias effort 
 //    m[j] = ( base[j] .* (exp(tau[j]) - 1) ) ./ ( 1 + exp(tau[j]) + exp(chi[j]) + exp(tau[j]+chi[j]) );
 //===============================================================================
 //    D[j,1] = m[j,1];
@@ -139,7 +139,7 @@ P[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
       }
 //===============================================================================
 
-    u[j] = r[j] - D[j] - 0*Real[j];
+    u[j] = r[j] - D[j] - Real[j];
 
     }
 }
@@ -155,21 +155,22 @@ model {
 
   // priors for non-negative, eg, sd
 
+//sd_base ~ normal(0, 1);
+mu_base ~ normal(0, 1);
       //s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
       //sigma ~ beta(0.5,0.5);
-//  p ~ student_t(4, 0, 1);//normal(0, 1);//5);
+p ~ normal(0, 1);//student_t(4, 0, 1);//5);
 g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
 w ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 5);//10);//0); //0.2); //1);  // w_init
 //  d ~ dirichlet(rep_vector(0.1, L));   // =1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
 
-//sd_base ~ normal(0, 10);//cauchy(0, 5);//
 
   for (j in 1:J) { 
 
 // ??? identifiable ??    
 //mu_base[j] ~ normal(0, 1);
-//err_log_base[j] ~ normal(0, 1);
 
+err_log_base[j] ~ normal(0, 1);
     season_raw[j] ~ normal(mu_season, sd_season);
 
     u[j,1] ~ normal(season_n[j,1] + mu_u1, sd_y);

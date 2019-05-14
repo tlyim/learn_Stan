@@ -47,6 +47,7 @@ options(mc.cores = parallel::detectCores())  #
 # J=45,N=4*30 gives reasonable estimates of the baseline model of AR(1) with hierarchical seasonability
 # J=60,N=4*20 also seems to be acceptable
 # Can consider J=40,N=4*15 for model dev process only  
+#   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
 J = 40#45#20 #200     # number of firms
 N = 4*15#5#15   #number of (quarterly) observations of a firm
@@ -54,6 +55,7 @@ Q = 4 # quarterly time series
 
 mu_season = c(-0.12, -0.06, 0.15)
 sd_season = 0.1
+mu_base = -1.6
 sd_base = 0.1  
 sd_omega = 0.1
 sd_gamma = 0.05
@@ -164,7 +166,7 @@ X.l <- data.frame(
   # lapply(as.matrix)
 
 get_ratioNED <- function(ratioNED_req, J, N) {
-  C = pmax(ratioNED_req, rbinom(J, 20, ratioNED_req)/20) 
+  CC = pmax(ratioNED_req, rbinom(J, 20, ratioNED_req)/20) 
   EE = rep(NULL, J)
   for (n in 1:N)  { 
     A = rbinom(J, 1, 0.5)/20
@@ -211,6 +213,7 @@ y_init = y_init,
                       sd_y = sd_y,
                       sd_gamma = sd_gamma,
                       sd_omega = sd_omega,
+mu_base = mu_base,
                       sd_base = sd_base 
                       )
 # save(simu_SSM_data, file="simu_SSM_data.rda")
@@ -306,14 +309,15 @@ initf2 <- function(chain_id = 1) {
   list(mu_alpha = mu_alpha, beta = beta, #shape = shape, eta = eta, #sigma = sigma, mu_alpha01 = mu_alpha01, 
        s = s, p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
        mu_u1 = y_init, #u = array(y_LT, dim = c(J,N)),
-       rho = rho, sd_y = sd_y, sd_base = sd_base, sd_gamma = sd_gamma, sd_omega = sd_omega)
+       rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base, sd_gamma = sd_gamma, sd_omega = sd_omega)
   }
 # generate a list of lists to specify initial values
 init_ll <- lapply(1:n_chains, function(id) initf2(chain_id = id))
 
 # Run the full model and refer to the debug model to save compilation time 
 system.time({
-fit1 <- stan(
+fit2 <- stan(
+#fit1 <- stan(
   
 file = "SSM0.1.5test.stan",  # Stan program
 #  file = "SSM2.4.stan",  # Stan program
@@ -334,7 +338,7 @@ file = "SSM0.1.5test.stan",  # Stan program
   )
 })
 
-fit2 <- fit1
+#fit2 <- fit1
 #save(fit2 , file="fit2.rda")#, file="/scratch/city/fit2.rda")
 # beepr::beep()
 
@@ -358,7 +362,7 @@ fit2 <- fit1
 
 ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_u1", "mu_alpha", "beta", #"s", #"eta", #"rho_raw", #"rho", 
-              #"p",  
+              "p",  
               "g", 
               "w", "d", #"mu_season", "sd_season", " 
               "sd_y", "sd_season", "mu_season" # "season_raw" 
@@ -380,6 +384,10 @@ color_scheme_set("darkgray")
 mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "beta", "sd_y", "sd_season"))#,"w", "d")), "mu_season"
 mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "sd_y", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("beta", "sd_season", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
+
+mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]","p[3]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "g[3]", "w[1]", "w[2]","w[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]","w[3]", "p[1]", "p[2]","p[3]"))#,"w", "d"))
 
 mcmc_pairs(posterior, np = np, pars = c("mu_alpha","w[1]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("beta","w[2]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
