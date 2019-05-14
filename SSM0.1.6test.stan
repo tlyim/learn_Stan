@@ -63,7 +63,7 @@ vector<lower=0,upper=1>[N] P[J];  // potential room of manipulation constrained 
 vector[N] m[J]; // misreporting extent in the reported figures 
 vector[N] D[J];
 vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
-
+vector[N] alpha[J];
 
 //vector<lower=0,upper=1>[N] sigma[J]; // slope coefficient of the AR(1) process of y[n]
 //vector[N] theta[J]; // slope coefficient of the AR(1) process of y[n]
@@ -76,6 +76,8 @@ vector[N] chi[J]; //
 real base[J];  // ,upper=1
 
     vector[N] zeta[J]; // temptation to manage current-period real earnings upward
+
+    
 //===============================================================================
 // Define real EM component
     zeta[j] = Z[j]*p;// + sd_pi*err_pi[j];  // temptation to manage current-period real earnings upward
@@ -141,6 +143,14 @@ P[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
 
     u[j] = r[j] - D[j] - Real[j];
 
+//===============================================================================
+// Define real EM's LT impact on alpha
+alpha[j,1] = mu_alpha;
+for (n in 2:N) {
+  alpha[j,n] = alpha[j,n-1];
+  }
+//===============================================================================
+
     }
 }
 model {
@@ -174,7 +184,7 @@ err_log_base[j] ~ normal(0, 1);
     season_raw[j] ~ normal(mu_season, sd_season);
 
     u[j,1] ~ normal(season_n[j,1] + mu_u1, sd_y);
-    u[j,2:N] ~ normal(season_n[j,2:N] + mu_alpha + beta*u[j,1:(N-1)], sd_y); 
+    u[j,2:N] ~ normal(season_n[j,2:N] + alpha[j,2:N] + beta*u[j,1:(N-1)], sd_y); 
 
 
     

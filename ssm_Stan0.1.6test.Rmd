@@ -49,8 +49,8 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=40,N=4*15 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 40#40#45#20 #200     # number of firms
-N = 4*15#15#5#15   #number of (quarterly) observations of a firm
+J = 32#40#40#45#20 #200     # number of firms
+N = 4*12#15#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_season = c(-0.12, -0.06, 0.15)
@@ -86,7 +86,8 @@ S = length(s)
 # parameters of the data generation process of the temptation to do real EM
 #p = c(-1.5, 4.5, -7.65)# inv_logit()
 #p = c(-2.7, 0.105, -0.14)# # soft-clipping  rho=10
-p = c(-3.0, 0.13, -0.37)# # soft-clipping  rho=5
+p = c(0.37, 3.0, 0.13)# # soft-clipping  rho=5
+#p = c(-3.0, 0.13, -0.37)# # soft-clipping  rho=5
 I = length(p)
 #pvec <- matrix(data = p, nrow = I)  # define column vector as a matrix[N,1]
 #Z.l[[3]]%*%p %>%  str()  #ok with p as will be converted accordingly
@@ -94,14 +95,15 @@ I = length(p)
 # parameters of the data generation process of the temptation to misreport
 #g = c(-0.8, 2.5)
 #g = c(0.5, -0.8, 1.5)#2.5
-g = c(0.5, -0.5, 1)#2.5
+g = c(0.5, 0.5, 1)#2.5
+#g = c(0.5, -0.5, 1)#2.5
 K = length(g)
 
 # parameters of the data generation process of the strength of governance and monitoring 
 # (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 #w = c(7, 2)
-w = c(-3.7, 4.3, 0.6)#-3.5
-#w = c(-3.2, 4.5, 0.9)#-3.5
+w = c(3.7, 4.3, 0.6)#-3.5   #old: w = c(-3.2, 4.5, 0.9)#-3.5
+#w = c(-3.7, 4.3, 0.6)#-3.5   #old: w = c(-3.2, 4.5, 0.9)#-3.5
 H = length(w)
 
 #d = c(0.8, 0.2) # fractional reversal of prior-period manipluation by accruals
@@ -142,10 +144,10 @@ T.l <- data.frame(
 # make Z.l different from X.l to avoid less than full rank in estimation
 Z.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
-#  constant = rep(1, J*N),
-  indiv_integ = rbeta(J*N, integrity, 1-integrity), 
-  downgrade = rbinom(J*N, 1, downgrade_freq),
-constant = rep(1, J*N)#,
+  constant = (-1)*rep(1, J*N),
+  indiv_integ = (-1)*rbeta(J*N, integrity, 1-integrity), 
+  downgrade = rbinom(J*N, 1, downgrade_freq)#,
+#constant = rep(1, J*N)#,
  ) %>%
   df2mat.l()
   # split(.$gvkey) %>% 
@@ -157,7 +159,7 @@ constant = rep(1, J*N)#,
 X.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
   constant = rep(1, J*N),
-  indiv_integ = rbeta(J*N, integrity, 1-integrity), 
+  indiv_integ = (-1)*rbeta(J*N, integrity, 1-integrity), 
   downgrade = rbinom(J*N, 1, downgrade_freq)
   ) %>%
   df2mat.l()
@@ -179,7 +181,7 @@ get_ratioNED <- function(ratioNED_req, J, N) {
 # covariate matrix G capturing the strength of internal governance and external monitoring mechansims
 G.l <- data.frame(
   gvkey = rep(1:J, times=N), # note the difference from times=N
-  constant = rep(1, J*N),
+  constant = (-1)*rep(1, J*N),
   ratioNED = get_ratioNED(ratioNED_req, J, N), #rep(rbeta(J, 8*ratioNED_req, 8*(1-ratioNED_req)), each=N),
   Big4 = rbinom(J*N, 1, Big4_freq)
   ) %>%
@@ -297,9 +299,9 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 3000#2500#3000
+n_iter = 300#0#2500#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 1000
+n_warmup = 100#0
 #n_warmup = n_iter/2 
 n_chains = 3#4#8
 
@@ -407,9 +409,9 @@ mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "w[3]", "p[1]", "p[2]","
     # mu_u1 = y_init = 4; mu_alpha = 0.1 #0.2; beta = 0.6 #0.85;  
     # rho = 5,  
     # s = c(0.4, 0.7, 0.5) 
-# p = c(-3.0, 0.13, -0.37) [rho=5]; 
-# g = c(0.5, -0.5, 1);     #[old] g = c(0.5, -0.8, 2.5)
-# w = c(-3.7, 4.3, 0.6)         #[old] w = c(-3.5, 7, 2)
+# p = c(0.37, 3.0, 0.13)# # soft-clipping  rho=5 #old: p = c(-3.0, 0.13, -0.37) [rho=5]; 
+# g = c(0.5, 0.5, 1)   #old: g = c(0.5, -0.5, 1);     #[old] g = c(0.5, -0.8, 2.5)
+# w = c(3.7, 4.3, 0.6)    #old: w = c(-3.7, 4.3, 0.6)    #[old] w = c(-3.5, 7, 2) 
     # d = c(0.05, 0.7, 0.25) 
 # mu_season = c(-0.12, -0.06, 0.15), sd_season = 0.1; sd_pi = 0.05, 
   # mu_base = -1.6, sd_base = 0.15; sd_y = 0.15, sd_gamma = 0.05, sd_omega = 0.1, 
