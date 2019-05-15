@@ -6,6 +6,9 @@ output: html_notebook
 ```{r}
 
 #knitr::purl("ssm_Stan0.1.9.Rmd", output = "ssm_Stan0.1.9.R", documentation = 2)
+# .libPaths()
+# .libPaths( c( "~/R_library/3.5", .libPaths() ) )
+# .libPaths()
 
 #library(tidyverse)
 library(dplyr)
@@ -378,7 +381,8 @@ print(fit2, c("mu_u1", "mu_alpha", "beta", "theta", "mu_base", "sd_base",
 posterior <- as.array(fit2)
 lp <- log_posterior(fit2)
 np <- nuts_params(fit2)  # nuts parameters
-color_scheme_set("darkgray")
+par(mar = c(4, 4, 0.5, 0.5))
+color_scheme_set("gray") #"darkgray")
 #Error: cannot allocate vector of size 782.8 Mb
 #mcmc_parcoord(posterior, np = np)
 
@@ -429,9 +433,7 @@ mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "w[3]", "p[1]", "p[2]", 
 
 
 
-
-
-```{r}
+```{r, eval=F}
 color_scheme_set("mix-brightblue-gray")
 mcmc_trace(posterior_cp, pars = "tau", np = np_cp) +
   xlab("Post-warmup iteration")
@@ -556,7 +558,7 @@ plot(params.df$iter, params.df$sd_season, pch=16, cex=0.8, #col=c_dark,
 # base.mat %>% t() 
 ```
 
-```{r, eval = FASLE}
+```{r, eval = F}
 
 # # extract base that limits the lowest P reachable
 # m.mat %>% t() %>% psych::describe() %>% print(digits=3)
