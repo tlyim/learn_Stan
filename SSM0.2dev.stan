@@ -16,6 +16,7 @@ data {
   matrix[N,H] G[J]; // covariates (capturing the strength of internal governance and external monitoring mechansims)
 }
 transformed data {
+  int<lower=0> H_cor = 2; // number of correlated coefficents in w for covariate matrix G
 }
 parameters {
   real mu_u1;
@@ -32,7 +33,14 @@ vector[S] s; // coefficients of the S covariates in matrix T
   vector[I] p; // coefficients of the K covariates in matrix Z
   vector[K] g; // coefficients of the K covariates in matrix X
 //vector[H] w_raw; // coefficients of the H covariates in matrix G
-  vector[H] w; // coefficients of the H covariates in matrix G
+//===============================================================================
+vector[H-H_cor] w0; // vector of means for correlated coeffs in w
+vector[H_cor] w_mu; // vector of means for correlated coeffs in w
+vector<lower=0>[H_cor] w_sd; // vector of sd for correlated coeffs in w
+cholesky_factor_corr[H_cor] w_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+vector[H_cor] w_err; // primitive vector of correlated coeffs in w
+//  vector[H] w; // coefficients of the H covariates in matrix G
+//===============================================================================
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 //
 //
@@ -56,10 +64,14 @@ vector[N] sigma[J]; // fraction of real EM that is shifting from next period's s
   vector[N] D[J];
   vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
   vector[N] alpha[J];
-//vector[H] w; // coefficients of the H covariates in matrix G
-
-//vector<lower=0,upper=1>[N] sigma[J]; // slope coefficient of the AR(1) process of y[n]
-//vector[N] theta[J]; // slope coefficient of the AR(1) process of y[n]
+//===============================================================================
+vector[H] w; // coefficients of the H covariates in matrix G
+vector[H_cor] w_raw; // non-centered vector of correlated coeffs in w
+w_raw = w_mu + w_sd .* (w_L * w_err);
+w[1] = w_raw[1];
+w[2] = w0[1];
+w[3] = w_raw[2];
+//===============================================================================
 
 
 //Not working<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -163,9 +175,15 @@ sd_base ~ normal(0, 1);
 s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
   p ~ normal(0, 1);//student_t(4, 0, 1);//5);
   g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
-//w_raw ~ normal(0, 1);// 
-  w ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 5);//10);//0); //0.2); //1);  // w_init
 //  d ~ dirichlet(rep_vector(0.1, L));   // = 1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
+//===============================================================================
+//  w ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 5);//10);//0); //0.2); //1);  // w_init
+w0 ~ normal(0, 2);
+w_mu ~ normal(0,1);
+w_sd ~ normal(0,2);
+w_L ~ lkj_corr_cholesky(2);
+w_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//===============================================================================
 
 
   for (j in 1:J) { 
