@@ -17,6 +17,7 @@ data {
 }
 transformed data {
   int<lower=0> H_cor = 2; // number of correlated coefficents in w for covariate matrix G
+  int<lower=0> I_cor = 2; // number of correlated coefficents in w for covariate matrix G
 }
 parameters {
   real mu_u1;
@@ -30,16 +31,22 @@ real<lower=0> theta; // sd of the hyperprior for season_raw
   real<lower=0> sd_season; // sd of the hyperprior for season_raw
 
 vector[S] s; // coefficients of the S covariates in matrix T
-  vector[I] p; // coefficients of the K covariates in matrix Z
+//  vector[I] p; // coefficients of the K covariates in matrix Z
   vector[K] g; // coefficients of the K covariates in matrix X
 //vector[H] w_raw; // coefficients of the H covariates in matrix G
 //===============================================================================
-vector[H-H_cor] w0; // vector of means for correlated coeffs in w
+vector[H - H_cor] w0; // vector of means for correlated coeffs in w
 vector[H_cor] w_mu; // vector of means for correlated coeffs in w
 vector<lower=0>[H_cor] w_sd; // vector of sd for correlated coeffs in w
 cholesky_factor_corr[H_cor] w_L; // Cholesky factor of correlation matrix for correlated coeffs in w
 vector[H_cor] w_err; // primitive vector of correlated coeffs in w
 //  vector[H] w; // coefficients of the H covariates in matrix G
+//===============================================================================
+vector[I - I_cor] p0; // vector of means for correlated coeffs in w
+vector[I_cor] p_mu; // vector of means for correlated coeffs in w
+vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
+cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+vector[I_cor] p_err; // primitive vector of correlated coeffs in w
 //===============================================================================
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 //
@@ -58,20 +65,9 @@ vector[N] sigma[J]; // fraction of real EM that is shifting from next period's s
   //    (i) purely RnD-based or 
   //    (ii) sales-based but not by shifting next period's sales forward
 
-  vector<lower=-1,upper=1>[N] b[J]; // bias effort driven by the temptation to misreport //<lower=-1,upper=1>
-  vector<lower=0,upper=1>[N] R[J];  // potential room of manipulation constrained by governance mechanisms //<lower=0>
   vector[N] m[J]; // misreporting extent in the reported figures 
-  vector[N] D[J];
   vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
   vector[N] alpha[J];
-//===============================================================================
-vector[H] w; // coefficients of the H covariates in matrix G
-vector[H_cor] w_raw; // non-centered vector of correlated coeffs in w
-w_raw = w_mu + w_sd .* (w_L * w_err);
-w[1] = w_raw[1];
-w[2] = w0[1];
-w[3] = w_raw[2];
-//===============================================================================
 
 
 //Not working<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -90,6 +86,14 @@ w[3] = w_raw[2];
     vector[N] chi[J]; // 
     vector[N] zeta[J]; // temptation to manage current-period real earnings upward
     vector[N] phi[J]; // 
+  vector[N] b[J]; //<lower=-1,upper=1> bias effort driven by the temptation to misreport //<lower=-1,upper=1>
+  vector[N] R[J];  //<lower=0,upper=1> potential room of manipulation constrained by governance mechanisms //<lower=0>
+  vector[N] D[J];
+//===============================================================================
+vector[H] w; // coefficients of the H covariates in matrix G
+vector[H_cor] w_raw; // non-centered vector of correlated coeffs in w
+vector[I] p; // coefficients of the H covariates in matrix G
+vector[I_cor] p_raw; // non-centered vector of correlated coeffs in w
     
     
 //===============================================================================
@@ -104,6 +108,19 @@ w[3] = w_raw[2];
     //sigma[j] = inv_logit(T[j]*s);// + err_sigma[j]); 
     //theta[j] = beta + sigma[j];
         //theta[j] = beta + sigma[j] + eta*(1-sigma[j]);
+
+
+//===============================================================================
+w_raw = w_mu + w_sd .* (w_L * w_err);
+w[1] = w_raw[1];
+w[2] = w0[1];
+w[3] = w_raw[2];
+//===============================================================================
+p_raw = p_mu + p_sd .* (p_L * p_err);
+p[1] = p0[1];
+p[2] = p_raw[1];
+p[3] = p_raw[2];
+//===============================================================================
 
 
 //===============================================================================
@@ -173,16 +190,22 @@ sd_base ~ normal(0, 1);
   mu_base ~ normal(0, 1);
   
 s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
-  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
   g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
 //  d ~ dirichlet(rep_vector(0.1, L));   // = 1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
 //===============================================================================
 //  w ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 5);//10);//0); //0.2); //1);  // w_init
-w0 ~ normal(0, 2);
+w0 ~ normal(0, 1);//2);
 w_mu ~ normal(0,1);
-w_sd ~ normal(0,2);
+w_sd ~ normal(0, 1);//2);
 w_L ~ lkj_corr_cholesky(2);
 w_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//===============================================================================
+//  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
+p0 ~ normal(0, 2);
+p_mu ~ normal(0,1);
+p_sd ~ normal(0,2);
+p_L ~ lkj_corr_cholesky(2);
+p_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //===============================================================================
 
 

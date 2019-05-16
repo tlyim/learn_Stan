@@ -53,8 +53,8 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 42#40#45#20 #200     # number of firms
-N = 4*18#15#5#15   #number of (quarterly) observations of a firm
+J = 40#42#40#45#20 #200     # number of firms
+N = 4*15#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_season = c(-0.12, -0.06, 0.15)
@@ -301,9 +301,9 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 1750#2000#3000
+n_iter = 1250#1750#2000#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 1000
+n_warmup = 750#1000
 #n_warmup = n_iter/2 
 n_chains = 8#6#4#8
 
@@ -329,7 +329,7 @@ file = "SSM0.2dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.99, 
+  control = list(adapt_delta = 0.9,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -394,6 +394,8 @@ mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w0[1]", "w_mu[2]", "w_sd[1]"
 mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_err[1]", "w_err[2]", "w0[1]"))
 mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "w_mu[1]", "w0[1]", "w_mu[2]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "p0[1]", "p_mu[1]", "p_mu[2]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
 
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "p[1]", "p[2]", "p[3]"))#,"w", "d"))
