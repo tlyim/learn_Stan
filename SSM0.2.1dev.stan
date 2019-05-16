@@ -16,8 +16,8 @@ data {
   matrix[N,H] G[J]; // covariates (capturing the strength of internal governance and external monitoring mechansims)
 }
 transformed data {
+  int<lower=0> I_cor = 2; // number of correlated coefficents in p for covariate matrix Z
   int<lower=0> H_cor = 2; // number of correlated coefficents in w for covariate matrix G
-  int<lower=0> I_cor = 2; // number of correlated coefficents in w for covariate matrix G
 }
 parameters {
   real mu_u1;
@@ -30,14 +30,14 @@ parameters {
   vector[Q-1] mu_season;   // mu of the hyperprior for season_raw
   real<lower=0> sd_season; // sd of the hyperprior for season_raw
 
-  vector[S] s; // coefficients of the S covariates in matrix T
+//  vector[S] s; // coefficients of the S covariates in matrix T
 //===============================================================================
-  vector[I] p; // coefficients of the K covariates in matrix Z
+//  vector[I] p; // coefficients of the K covariates in matrix Z
             //vector[I - I_cor] p0; // vector of means for correlated coeffs in w
-            //vector[I_cor] p_mu; // vector of means for correlated coeffs in w
-            //vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
-            //cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-            //vector[I_cor] p_err; // primitive vector of correlated coeffs in w
+            vector[I_cor] p_mu; // vector of means for correlated coeffs in w
+            vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
+            cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+            vector[I_cor] p_err; // primitive vector of correlated coeffs in w
 //===============================================================================
   vector[K] g; // coefficients of the K covariates in matrix X
 //===============================================================================
@@ -79,10 +79,10 @@ transformed parameters {
     vector[N] R[J];  //<lower=0,upper=1> potential room of manipulation constrained by governance mechanisms //<lower=0>
     vector[N] D[J];
 //===============================================================================
+vector[I] p; // coefficients of the H covariates in matrix G
+//vector[I_cor] p_raw; // non-centered vector of correlated coeffs in w
             //vector[H] w; // coefficients of the H covariates in matrix G
             //vector[H_cor] w_raw; // non-centered vector of correlated coeffs in w
-            //vector[I] p; // coefficients of the H covariates in matrix G
-            //vector[I_cor] p_raw; // non-centered vector of correlated coeffs in w
     
     
 //===============================================================================
@@ -122,7 +122,9 @@ transformed parameters {
       
 
 //===============================================================================
-              //p_raw = p_mu + p_sd .* (p_L * p_err);
+p = 
+//p_raw = 
+    p_mu + p_sd .* (p_L * p_err);
               //p[1] = p0[1];
               //p[2] = p_raw[1];
               //p[3] = p_raw[2];
@@ -134,8 +136,8 @@ transformed parameters {
 
 //===============================================================================
 // Define the fraction of real EM that is sales-based and due to shfiting next period's sales forward
-    zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
-    sigma[j] = ( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
+//    zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
+    sigma[j] = rep_vector(0.7, N);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
 // fraction of Real[j] that is sales-based, rather than RnD-based,
 //   where T indicates whether j is a retailer and has RnD spending or not reported in last period
     //sigma[j] = inv_logit(T[j]*s);// + err_sigma[j]); 
@@ -172,14 +174,14 @@ model {
   sd_season ~ normal(0, 1);//exponential(1); //
   sd_y ~ normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
   
-  s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
+//  s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
 //===============================================================================
-  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
+//  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
         //p0 ~ normal(0, 2);
-        //p_mu ~ normal(0,1);
-        //p_sd ~ normal(0,2);
-        //p_L ~ lkj_corr_cholesky(2);
-        //p_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+        p_mu ~ normal(0,1);
+        p_sd ~ normal(0,2);
+        p_L ~ lkj_corr_cholesky(2);
+        p_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
   theta ~ normal(0, 1);  
 //===============================================================================
   g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init

@@ -77,7 +77,7 @@ generated quantities {
 //===============================================================================
 // Define real EM component
     zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
-    sigma[j] = ( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
+    sigma[j] = rep_vector(0.7, N);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
 // fraction of Real[j] that is sales-based, rather than RnD-based,
 //   where T indicates whether j is a retailer and has RnD spending or not reported in last period
 //sigma[j] = inv_logit(T[j]*s);// + err_sigma[j]); 
