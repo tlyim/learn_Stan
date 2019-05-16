@@ -329,7 +329,7 @@ file = "SSM0.2dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.9,#9, 
+  control = list(adapt_delta = 0.99,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -368,7 +368,10 @@ ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_u1", "mu_alpha", "beta", "theta", "mu_base", "sd_base", 
               "sd_y", "sd_season", "mu_season", # "sd_gamma", "sd_omega"),
               "s", #"eta", #"rho", 
-              "p", "g", "w", "d" 
+              #"p", 
+              "g", 
+              #"w", 
+              "d" 
               ), 
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 
@@ -398,15 +401,17 @@ mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "p0[1]", "p_mu[1
 mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
 
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "p[1]", "p[2]", "p[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "p[1]", "p[2]", "p[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "d[1]", "d[2]", "d[3]"))#,"w", "d"))
 
-mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "p[1]", "p[2]", "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "p[3]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "g[3]", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "w[3]", "d[1]", "d[2]", "d[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", "p[1]", "p[2]", "p[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "p[3]", "g[1]", "g[2]", "g[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "g[3]", "d[1]", "d[2]", "d[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "g[3]", "w[1]", "w[2]", "w[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "w[3]", "d[1]", "d[2]", "d[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))#,"w", "d"))
 
 
