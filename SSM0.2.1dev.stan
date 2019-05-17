@@ -57,7 +57,7 @@ transformed parameters {
   vector[Q] season_q[J];
   vector[N] season_n[J];
   vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
-  vector[N] sigma[J]; // fraction of real EM that is shifting from next period's sales
+//  vector[N] sigma[J]; // fraction of real EM that is shifting from next period's sales
   // sigma = 0 means  the real EM is either 
   //    (i) purely RnD-based or 
   //    (ii) sales-based but not by shifting next period's sales forward
@@ -136,8 +136,8 @@ p =
 
 //===============================================================================
 // Define the fraction of real EM that is sales-based and due to shfiting next period's sales forward
-//    zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
-    sigma[j] = rep_vector(0.7, N);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
+                    //    zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
+                    //    sigma[j] = rep_vector(0.7, N);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
 // fraction of Real[j] that is sales-based, rather than RnD-based,
 //   where T indicates whether j is a retailer and has RnD spending or not reported in last period
     //sigma[j] = inv_logit(T[j]*s);// + err_sigma[j]); 
@@ -204,8 +204,10 @@ model {
     season_raw[j] ~ normal(mu_season, sd_season);
 
     u[j,1] ~ normal(season_n[j,1] + mu_u1, sd_y);
-    u[j,2:N] ~ normal(season_n[j,2:N] + alpha[j,2:N] + beta*u[j,1:(N-1)] 
-                        - sigma[j,1:(N-1)] .* Real[j,1:(N-1)]
+    u[j,2:N] ~ normal(season_n[j,2:N] 
+                          + mu_alpha //alpha[j,2:N] 
+                          + beta*u[j,1:(N-1)] 
+#                        - sigma[j,1:(N-1)] .* Real[j,1:(N-1)]
                         , sd_y); 
 
 //Also Work>>> ===============================================================================

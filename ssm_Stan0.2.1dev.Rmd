@@ -306,7 +306,7 @@ initf2 <- function(chain_id = 1) {
   list(mu_alpha = mu_alpha, beta = beta, #shape = shape, eta = eta, #sigma = sigma, mu_alpha01 = mu_alpha01, 
        s = s, p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
        mu_u1 = y_init, #u = array(y_LT, dim = c(J,N)),
-       rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base, sd_gamma = sd_gamma, sd_omega = sd_omega)
+       rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base) #, sd_gamma = sd_gamma, sd_omega = sd_omega)
   }
 # generate a list of lists to specify initial values
 init_ll <- lapply(1:n_chains, function(id) initf2(chain_id = id))

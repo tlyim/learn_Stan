@@ -94,7 +94,11 @@ generated quantities {
     u[j,1] = season_n[j,1] + y_init + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
     for (n in 2:N) {
       alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
-      u[j,n] = season_n[j,n] + alpha[j,n] + beta*u[j,n-1] - sigma[j,n-1] .* Real[j,n-1] + sd_y*normal_rng(0,1);
+      u[j,n] = season_n[j,n] 
+                  + mu_alpha //alpha[j,n] 
+                  + beta*u[j,n-1] 
+//                  - sigma[j,n-1] .* Real[j,n-1] 
+                  + sd_y*normal_rng(0,1);
       }
 
     y[j] = u[j] + Real[j]; //assumed all real EM are RnD-based; thus, no shifted sales
