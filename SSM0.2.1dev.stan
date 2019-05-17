@@ -21,9 +21,9 @@ transformed data {
 }
 parameters {
   real mu_u1;
-  real mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
+  real mu_alpha; //<lower=0>  intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
-  real<lower=0> theta; // sd of the hyperprior for season_raw
+//!!!  real<lower=0> theta; // sd of the hyperprior for season_raw
 
   real<lower=0> sd_y; // sd of the underlying unbiased figures (vector y)
   vector[Q-1] season_raw[J];
@@ -64,7 +64,7 @@ transformed parameters {
 
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
-  vector[N] alpha[J];
+//!!!  vector[N] alpha[J];
 vector[I] p; // coefficients of the H covariates in matrix G
 //vector[H] w; // coefficients of the H covariates in matrix G
 
@@ -147,12 +147,13 @@ p =
 
     u[j] = r[j] - D[j] - Real[j];
 
+//!!! 
 //===============================================================================
 // Define real EM's LT impact on alpha
-    alpha[j,1] = mu_alpha;
-    for (n in 2:N) {
-      alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
-      }
+//    alpha[j,1] = mu_alpha;
+//    for (n in 2:N) {
+//      alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
+//      }
 //===============================================================================
 
 //===============================================================================
@@ -182,7 +183,7 @@ model {
         p_sd ~ normal(0,2);
         p_L ~ lkj_corr_cholesky(2);
         p_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
-  theta ~ normal(0, 1);  
+//!!!  theta ~ normal(0, 1);  
 //===============================================================================
   g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
 //===============================================================================

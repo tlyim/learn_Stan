@@ -95,7 +95,7 @@ generated quantities {
     for (n in 2:N) {
       alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
       u[j,n] = season_n[j,n] 
-                  + mu_alpha //alpha[j,n] 
+                  + mu_alpha //alpha[j,n]  //<---------------------------
                   + beta*u[j,n-1] 
 //                  - sigma[j,n-1] .* Real[j,n-1] 
                   + sd_y*normal_rng(0,1);
