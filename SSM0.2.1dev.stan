@@ -65,6 +65,8 @@ transformed parameters {
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
   vector[N] alpha[J];
+vector[I] p; // coefficients of the H covariates in matrix G
+//vector[H] w; // coefficients of the H covariates in matrix G
 
 
   for (j in 1:J) {
@@ -79,9 +81,7 @@ transformed parameters {
     vector[N] R[J];  //<lower=0,upper=1> potential room of manipulation constrained by governance mechanisms //<lower=0>
     vector[N] D[J];
 //===============================================================================
-vector[I] p; // coefficients of the H covariates in matrix G
 //vector[I_cor] p_raw; // non-centered vector of correlated coeffs in w
-            //vector[H] w; // coefficients of the H covariates in matrix G
             //vector[H_cor] w_raw; // non-centered vector of correlated coeffs in w
     
     

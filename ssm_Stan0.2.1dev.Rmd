@@ -53,8 +53,8 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 35#40#42#40#45#20 #200     # number of firms
-N = 4*12#15#18#15#5#15   #number of (quarterly) observations of a firm
+J = 40#42#40#45#20 #200     # number of firms
+N = 4*15#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_base = -1.6
@@ -294,7 +294,7 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 1200#1750#2000#3000
+n_iter = 1300#1750#2000#3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 800#1000
 #n_warmup = n_iter/2 
@@ -322,9 +322,9 @@ file = "SSM0.2.1dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.95,#9, 
+  control = list(adapt_delta = 0.97,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
-                 max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
+                 max_treedepth = 14),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
   chains = n_chains,#1,#8,             # default is 4 Markov chains
 #  cores = 8,
@@ -345,7 +345,7 @@ file = "SSM0.2.1dev.stan",  # Stan program
 ```
 
 # Summary of the posterior sample 
-```{r}
+```{r} 
       # pairs_stan <- function(chain, stan_model, pars) {
       #   energy <- as.matrix(sapply(get_sampler_params(stan_model, inc_warmup = F), 
       #                              function(x) x[,"energy__"]))
@@ -359,9 +359,10 @@ file = "SSM0.2.1dev.stan",  # Stan program
 
 ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_u1", "mu_alpha", "beta", "theta", "mu_base", #"sd_base", #"rho", 
-              "sd_y", "sd_season", "mu_season", 
-              "s", 
-              "p", "g", "w", "d" 
+              "sd_y", "sd_season", "mu_season", #"s", "p", 
+              "p_mu", "p_sd", "p_L",
+              "p",
+              "g", "w", "d" 
               ), 
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 
@@ -370,7 +371,7 @@ posterior <- as.array(fit2)
 lp <- log_posterior(fit2)
 np <- nuts_params(fit2)  # nuts parameters
 #par(mar = c(4, 4, 0.5, 0.5))
-knitr::opts_chunk$set(fig.width=7, fig.height=7)
+knitr::opts_chunk$set(fig.width=6, fig.height=6)
 color_scheme_set("gray") #"darkgray")
 #Error: cannot allocate vector of size 782.8 Mb
 #mcmc_parcoord(posterior, np = np)
@@ -387,20 +388,22 @@ mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "sd_y", "sd_season")
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "g[1]", "g[2]"))#, "p[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "w[1]", "w[2]"))#, "p[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "d[1]", "d[2]", "d[3]"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#, "p[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#, "p[3]"))#,"w", "d"))
 
-
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "mu_alpha", "beta"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "sd_y", "sd_season"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "mu_base", "theta"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "g[1]", "g[2]"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "w[1]", "w[2]"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "d[1]", "d[2]", "d[3]"))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "s[1]", "s[2]", "s[3]"))#, "p[3]"))#,"w", "d"))
 
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_sd[1]", "p_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("p_sd[1]", "p_sd[2]", "p_err[1]", "p_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("p_err[1]", "p_err[2]", "p_mu[1]", "p_mu[2]"))
+
+
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "mu_alpha", "beta"))#, "p_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "sd_y", "sd_season"))#, "p_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "mu_base", "theta"))#, "p_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "g[1]", "g[2]"))#, "p_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "w[1]", "w[2]"))#, "p_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "d[1]", "d[2]", "d[3]"))#, "p_mu[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "s[1]", "s[2]", "s[3]"))#, "p_mu[3]"))#,"w", "d"))
+
 
 
     # mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w0[1]", "w_mu[2]", "w_sd[1]", "w_sd[2]"))
@@ -412,14 +415,14 @@ mcmc_pairs(posterior, np = np, pars = c("p_err[1]", "p_err[2]", "p_mu[1]", "p_mu
 
 
         # mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#,"w", "d"))
-        # mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "p[1]", "p[2]"))#, "p[3]"))#,"w", "d"))
+        # mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "p_mu[1]", "p_mu[2]"))#, "p_mu[3]"))#,"w", "d"))
         # mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "g[1]", "g[2]"))#, "g[3]"))#,"w", "d"))
         # mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "w[1]", "w[2]"))#, "w[3]"))#,"w", "d"))
         # mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "d[1]", "d[2]", "d[3]"))#,"w", "d"))
         # 
         # mcmc_pairs(posterior, np = np, pars = c("s[1]", "s[2]", "s[3]", 
-        #                                         "p[1]", "p[2]"))#, "p[3]"))#,"w", "d"))
-        # mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", #"p[3]", 
+        #                                         "p_mu[1]", "p_mu[2]"))#, "p_mu[3]"))#,"w", "d"))
+        # mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", #"p_mu[3]", 
         #                                         "g[1]", "g[2]"))#, "g[3]"))#,"w", "d"))
         # mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", #"g[3]", 
         #                                         "w[1]", "w[2]"))#, "w[3]"))#,"w", "d"))
@@ -441,12 +444,11 @@ mcmc_pairs(posterior, np = np, pars = c("p_err[1]", "p_err[2]", "p_mu[1]", "p_mu
     # rho = 5,  
 # mu_base = -1.6, sd_base = 0.05;  
   # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.7, 0.5, 0.4) 
-# p = c(3.0, 0.13, 0.37)   # soft-clipping [rho=5]; 
-# g = c(0.5, 1, 0.5)   
-# w = c(4.3, 0.6, 3.7)  
+# s = c(0.4, 0.7, 0.5) 
+# p = c(0.95, 0.7)# middle: 3.0,  #old: p = c(3.0, 0.13, 0.37)   # soft-clipping [rho=5]; 
+# g = c(0.77, 0.5)   #old: g = c(0.5, 1, 0.5)   
+# w = c(2.5, 3.9)    #old: w = c(4.3, 0.6, 3.7)  
   # d = c(0.05, 0.7, 0.25) 
-
 
 ```
 
@@ -595,7 +597,7 @@ w = c(3.7, 4.3)#, 0.6)
 # y.mat %>% t() %>% psych::describe() %>% print(digits=3)
 # { base.mat <- extract(simu_fit)$base[1,] } %>% t()
 # psych::describe(base.mat) %>% print(digits=3)
-# extract(simu_fit)$P[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
+# extract(simu_fit)$p_mu[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
 # extract(simu_fit)$b[1,,] %>% t() %>% psych::describe() %>% print(digits=3)
 
 #//===============================================================================
