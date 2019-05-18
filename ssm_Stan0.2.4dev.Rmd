@@ -363,8 +363,7 @@ ss_complete_pool <- extract(fit2);
 print(fit2, c("mu_u1", "mu_alpha", "beta", "mu_base", #"theta", "sd_base", #"rho", 
               "sd_y", #"sd_season", "mu_season", #"s", "p", 
               "p_mu", "p_sd", "p_L",
-              "p_mu", "p_sd", "p_L",
-              "w_mu", "w_sd", "w_L",
+              "g_mu", "g_sd", "g_L",
               "w_mu", "w_sd", "w_L",
               "p",
               "g", "w", "d" 
@@ -389,15 +388,19 @@ color_scheme_set("gray") #"darkgray")
 #mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "beta", "sd_y"))#, "sd_season"))#, "sd_base")) 
 mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "beta", "sd_y", "mu_base"))#, "theta"))#, "p[3]"))#,"w", "d"))
 #mcmc_pairs(posterior, np = np, pars = c("sd_y", "sd_season", "mu_base"))#, "theta"))))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "mu_alpha", "beta", "mu_base"))#, "theta"))))#, "p[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "mu_alpha", "beta", "mu_base"))#, "theta"))))#, "p[3]"))#,"w", "d"))
 #mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "mu_base"))#, "theta"))))#, "p[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_alpha", "beta", "mu_base"))#, "theta"))))#, "p[3]"))#,"w", "d"))
-#mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#, "p[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_alpha", "beta"))#, "theta"))))#, "p[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "sd_y", "mu_base"))#, "theta"))))#, #mcmc_pairs(posterior, np = np, pars = c("mu_base", "theta", "s[1]", "s[2]", "s[3]"))#, "p[3]"))#,"w", "d"))
 
 
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_sd[1]", "p_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("p_sd[1]", "p_sd[2]", "p_err[1]", "p_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("p_err[1]", "p_err[2]", "p_mu[1]", "p_mu[2]"))
+
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_sd[1]", "g_sd[2]"))
+mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_err[1]", "g_err[2]"))
+mcmc_pairs(posterior, np = np, pars = c("g_err[1]", "g_err[2]", "g_mu[1]", "g_mu[2]"))
 
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_sd[1]", "w_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_err[1]", "w_err[2]"))
@@ -405,17 +408,22 @@ mcmc_pairs(posterior, np = np, pars = c("w_err[1]", "w_err[2]", "w_mu[1]", "w_mu
 
 
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "mu_alpha", "beta"))#, "p_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "sd_y"))#, "sd_season"))#, "p_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "mu_base"))#, "theta"))#, "p_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "g[1]", "g[2]"))#, "p_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "sd_y", "mu_base"))#, "sd_season"))#, "p_mu[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "mu_base"))#, "theta"))#, "p_mu[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "g[1]", "g[2]"))#, "p_mu[3]"))#,"w", "d"))
 #mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "w[1]", "w[2]"))#, "p_mu[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "d[1]", "d[2]", "d[3]"))#, "p_mu[3]"))#,"w", "d"))
 #mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "s[1]", "s[2]", "s[3]"))#, "p_mu[3]"))#,"w", "d"))
 
+
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "mu_alpha", "beta"))#, "g_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "sd_y", "mu_base"))#, "sd_season"))#, mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "d[1]", "d[2]", "d[3]"))#, "g_mu[3]"))#,"w", "d"))
+
+
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "mu_alpha", "beta"))#, "w_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "sd_y"))#, "sd_season"))#, "w_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "mu_base"))#, "theta"))#, "w_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "g[1]", "g[2]"))#, "w_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "sd_y", "mu_base"))#, "sd_season"))#, "w_mu[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "mu_base"))#, "theta"))#, "w_mu[3]"))#,"w", "d"))
+#mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "g[1]", "g[2]"))#, "w_mu[3]"))#,"w", "d"))
 #mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w[1]", "w[2]"))#, "w_mu[3]"))#,"w", "d"))
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "d[1]", "d[2]", "d[3]"))#, "w_mu[3]"))#,"w", "d"))
 #mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "s[1]", "s[2]", "s[3]"))#, "w_mu[3]"))#,"w", "d"))
