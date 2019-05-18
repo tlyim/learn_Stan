@@ -7,7 +7,7 @@ fig_height: 6
 
 ```{r}
 
-#knitr::purl("ssm_Stan0.2.2dev.Rmd", output = "ssm_Stan0.2.2dev.R", documentation = 2)
+#knitr::purl("ssm_Stan0.2.4dev.Rmd", output = "ssm_Stan0.2.4dev.R", documentation = 2)
 # .libPaths()
 # .libPaths( c( "~/R_library/3.5", .libPaths() ) )
 # .libPaths()
@@ -55,8 +55,8 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 45#42#40#45#20 #200     # number of firms
-N = 4*15#18#15#5#15   #number of (quarterly) observations of a firm
+J = 10#42#40#45#20 #200     # number of firms
+N = 4*30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_base = -1.6
@@ -220,7 +220,7 @@ y_init = y_init,
 
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
-                 file = "simu_SSM0.2.2dev.stan",  # Stan program
+                 file = "simu_SSM0.2.4dev.stan",  # Stan program
 #                 file = "simu_SSM2.4.stan",  # Stan program
                  data=simu_SSM_data, iter=1, #seed=987,  
                  chains=1, algorithm="Fixed_param")  
@@ -318,7 +318,7 @@ system.time({
 fit2 <- stan(
 #fit1 <- stan(
   
-file = "SSM0.2.2dev.stan",  # Stan program
+file = "SSM0.2.4dev.stan",  # Stan program
 #  file = "SSM2.4.stan",  # Stan program
 
   data = SSM_data,    # named list of data
