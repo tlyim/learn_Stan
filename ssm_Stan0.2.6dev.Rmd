@@ -68,6 +68,7 @@ beta = 0.6#0.85  # slope parameter of the AR(1) processs of the underlying unbia
 theta = 0.1 # real EM's LT impact on alpha[j,n]
 y_LT = mu_alpha/(1-beta)
 y_init = y_LT # initial y for data simulation set to three times of the LT stationary level
+ab_mu = c(mu_alpha, beta)
 
 sd_y = 0.15  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
 mu_season = c(-0.12, -0.06, 0.15)
@@ -305,7 +306,7 @@ n_chains = 4#8
 
 
 initf2 <- function(chain_id = 1) {
-  list(mu_alpha = mu_alpha, beta = beta, theta = theta, #shape = shape,
+  list(mu_alpha = mu_alpha, beta = beta, theta = theta, ab_mu = ab_mu, #shape = shape,
        s = s, p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
        mu_u1 = y_init, #u = array(y_LT, dim = c(J,N)),
        rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base) #, sd_gamma = sd_gamma, sd_omega = sd_omega)

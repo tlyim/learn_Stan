@@ -23,7 +23,7 @@ transformed data {
 parameters {
   real mu_u1;
 //===============================================================================
-            vector<lower=0>[2] ab_mu; // vector of means for correlated coeffs in w
+            vector[2] ab_mu; // vector of means for correlated coeffs in w
             vector<lower=0>[2] ab_sd; // vector of sd for correlated coeffs in w
             cholesky_factor_corr[2] ab_L; // Cholesky factor of correlation matrix for correlated coeffs in w
             vector[2] ab_err; // primitive vector of correlated coeffs in w
@@ -203,7 +203,7 @@ model {
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
         //p0 ~ normal(0, 2);
-        ab_mu ~ normal(0, 2);//1);//normal(0.5, 0.5);//
+        ab_mu ~ uniform(0, 1);// normal(0, 2);//1);//normal(0.5, 0.5);//
         ab_sd ~ normal(0, 2);//2);
         ab_L ~ lkj_corr_cholesky(2);
         ab_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
