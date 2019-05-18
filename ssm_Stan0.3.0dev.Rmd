@@ -56,7 +56,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 10#5#42#40#45#20 #200     # number of firms
+J = 20#10#5#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -222,7 +222,7 @@ y_init = y_init,
 
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
-                 file = "simu_SSM0.3.0dev.stan",  # Stan program
+                 file = "simu_SSM0.3.0plain.stan",  # Stan program
 #                 file = "simu_SSM2.4.stan",  # Stan program
                  data=simu_SSM_data, iter=1, #seed=987,  
                  chains=1, algorithm="Fixed_param")  
@@ -231,43 +231,48 @@ q <- extract(simu_fit)$q[1,]
 
 r.mat <- extract(simu_fit)$r[1,,]
 y.mat <- extract(simu_fit)$y[1,,]
-m.mat <- extract(simu_fit)$m[1,,]
-D.mat <- extract(simu_fit)$D[1,,]
-b.mat <- extract(simu_fit)$b[1,,]
-R.mat <- extract(simu_fit)$R[1,,]
 
-Real.l <- extract(simu_fit)$Real[1,,] %>%
- round(3) %>%
-         t() %>%
-         split(col(.)) %>%
-         lapply(as.vector)
-       Real.l[[1]] # %>% unlist() %>% round(5))
-       
-cat("\n\n")
-    # sigma.l <- extract(simu_fit)$sigma[1,,] %>%
-    #  round(3) %>%
-    #          t() %>%
-    #          split(col(.))  %>%
-    #          lapply(as.vector)
-    #        sigma.l[[1]] # %>% unlist() %>% round(5))
-    # cat("\n\nmean(sigma): ", mean(sigma.l %>% unlist() %>% as.vector()), "\n\n")
 
-#       r.mat[1,]
-#       r.mat %>%  mean()
-#       r.mat %>% abs() %>% mean()
-#       y.mat[1,]
-#       y.mat %>%  mean()
-#       y.mat %>% abs() %>% mean()
-#       D.mat %>%  mean()
-#       D.mat %>% abs() %>% mean()
-#       m.mat %>%  mean()
-#       m.mat %>% abs() %>% mean()
+      # m.mat <- extract(simu_fit)$m[1,,]
+      # D.mat <- extract(simu_fit)$D[1,,]
+      # b.mat <- extract(simu_fit)$b[1,,]
+      # R.mat <- extract(simu_fit)$R[1,,]
+      # 
+      # Real.l <- extract(simu_fit)$Real[1,,] %>%
+      #  round(3) %>%
+      #          t() %>%
+      #          split(col(.)) %>%
+      #          lapply(as.vector)
+      #        Real.l[[1]] # %>% unlist() %>% round(5))
+      #        
+      # cat("\n\n")
+      #     # sigma.l <- extract(simu_fit)$sigma[1,,] %>%
+      #     #  round(3) %>%
+      #     #          t() %>%
+      #     #          split(col(.))  %>%
+      #     #          lapply(as.vector)
+      #     #        sigma.l[[1]] # %>% unlist() %>% round(5))
+      #     # cat("\n\nmean(sigma): ", mean(sigma.l %>% unlist() %>% as.vector()), "\n\n")
+      # 
+      # #       r.mat[1,]
+      # #       r.mat %>%  mean()
+      # #       r.mat %>% abs() %>% mean()
+      # #       y.mat[1,]
+      # #       y.mat %>%  mean()
+      # #       y.mat %>% abs() %>% mean()
+      # #       D.mat %>%  mean()
+      # #       D.mat %>% abs() %>% mean()
+      # #       m.mat %>%  mean()
+      # #       m.mat %>% abs() %>% mean()
+      # m.mat[1,] %>% round(4)
+      # b.mat[1,] %>% round(4)
+      # R.mat[1,] %>% round(4)
+      # R.mat %>% round(4) %>%  max()
+      # R.mat %>% round(4) %>%  min()
+
+
+r.mat[1,] %>% round(4)
 y.mat[1,] %>% round(4)
-m.mat[1,] %>% round(4)
-b.mat[1,] %>% round(4)
-R.mat[1,] %>% round(4)
-R.mat %>% round(4) %>%  max()
-R.mat %>% round(4) %>%  min()
 y.mat[,1] %>% round(4) %>%  mean()
 y.mat[,1] %>% round(4) %>%  max()
 y.mat[,1] %>% round(4) %>%  min()
@@ -299,11 +304,11 @@ mu_base = mu_base,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 2#250#2000#3000
+n_iter = 2250#2000#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 1#000
+n_warmup = 1000
 #n_warmup = n_iter/2 
-n_chains = 1#4#8
+n_chains = 4#8
 
 
 
@@ -327,7 +332,7 @@ file = "SSM0.3.0dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.99,#9, 
+  control = list(adapt_delta = 0.999,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -363,7 +368,7 @@ file = "SSM0.3.0dev.stan",  # Stan program
       # }
 
 ss_complete_pool <- extract(fit2);
-print(fit2, c("mu_u1", 
+print(fit2, c(
               "ab_mu", "ab_sd", "ab_L", "ab_err", 
               "mu_alpha", "beta", #"mu_base", #"theta", "sd_base", #"rho", 
               "sd_y", #"sd_season", "mu_season", #"s", "p", 
@@ -373,7 +378,8 @@ print(fit2, c("mu_u1",
 #              "w_mu", "w_sd", "w_L",
 #
 #              "p",
-              "g", "w", "d" 
+#              "g", "w", "d" 
+              "mu_u1" 
               ), 
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 
@@ -395,35 +401,41 @@ mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_sd[1]", "ab_
 mcmc_pairs(posterior, np = np, pars = c("ab_sd[1]", "ab_sd[2]", "ab_err[1]", "ab_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_err[1]", "ab_err[2]", "ab_mu[1]", "ab_mu[2]"))
 
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "ab_mu[1]", "ab_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "ab_sd[1]", "ab_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "ab_err[1]", "ab_err[2]"))
+    # mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "ab_mu[1]", "ab_mu[2]"))
+    # mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "ab_sd[1]", "ab_sd[2]"))
+    # mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "ab_err[1]", "ab_err[2]"))
+    # 
+    # mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "ab_mu[1]", "ab_mu[2]"))
+    # mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "ab_sd[1]", "ab_sd[2]"))
+    # mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "ab_err[1]", "ab_err[2]"))
 
-mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "ab_mu[1]", "ab_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "ab_sd[1]", "ab_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "ab_err[1]", "ab_err[2]"))
-
-mcmc_pairs(posterior, np = np, pars = c("sd_y", "ab_mu[1]", "ab_mu[2]", "ab_sd[1]", "ab_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("sd_y", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "ab_err[1]", "ab_err[2]"))
 
 
-mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "beta", "sd_y"))#, "mu_base"))#, "theta"))#, #,"w", "d"))
-# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "mu_alpha", "beta")) 
-# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "sd_y", "mu_base")) 
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "mu_alpha", "beta")) 
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "sd_y"))#, "mu_base")) 
-mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "mu_alpha", "beta")) 
-mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "sd_y"))#, "mu_base")) 
+mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "beta", "mu_u1", "sd_y"))#, "mu_base"))#, "theta"))#, #,"w", "d"))
+# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "mu_alpha", "beta"))
+# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "sd_y", "mu_base"))
+# mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "mu_alpha", "beta"))
+# mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "sd_y"))#, "mu_base"))
+# mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "mu_alpha", "beta"))
+# mcmc_pairs(posterior, np = np, pars = c("w[1]", "w[2]", "sd_y"))#, "mu_base"))
+# 
+# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "g[1]", "g[2]"))
+# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "w[1]", "w[2]"))
+# mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "w[1]", "w[2]"))
 
-# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "g[1]", "g[2]")) 
-# mcmc_pairs(posterior, np = np, pars = c("p[1]", "p[2]", "w[1]", "w[2]")) 
-mcmc_pairs(posterior, np = np, pars = c("g[1]", "g[2]", "w[1]", "w[2]")) 
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "ab_mu[1]", "ab_mu[2]")) 
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "ab_sd[1]", "ab_sd[2]")) 
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "ab_err[1]", "ab_err[2]")) 
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_alpha", "beta"))#, "theta"))))#, #,"w", "d"))
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_u1", "sd_y"))#, "mu_base"))#, "theta"))))#, 
 
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_alpha", "beta"))#, "theta"))))#, #,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "sd_y"))#, "mu_base"))#, "theta"))))#, 
+
 #mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "p[1]", "p[2]"))#, "theta"))))#, 
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "g[1]", "g[2]"))#, "theta"))))#, 
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "w[1]", "w[2]"))#, "theta"))))#, 
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "g[1]", "g[2]"))#, "theta"))))#, 
+# mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "w[1]", "w[2]"))#, "theta"))))#, 
 
 
 
@@ -470,7 +482,7 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "w[1]", "w[2]"))
 ```{r}
 #library(shinystan)
 ss_output <- launch_shinystan(as.shinystan(fit2, 
-                              pars=c("mu_u1", 
+                              pars=c(
                                      "ab_mu", "ab_sd", "ab_L", "ab_err", 
                                      "mu_alpha", "beta", #"mu_base", #"theta", "sd_base", #"rho", 
               "sd_y", #"sd_season", "mu_season", #"s", "p", 
@@ -479,7 +491,8 @@ ss_output <- launch_shinystan(as.shinystan(fit2,
 #              "g_mu", "g_sd", "g_L",
 #              "w_mu", "w_sd", "w_L",
 #              "p",
-              "g", "w", "d" 
+#              "g", "w", "d", 
+              "mu_u1"
               )))
 
 ```

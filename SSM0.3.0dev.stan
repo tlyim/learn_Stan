@@ -211,7 +211,7 @@ model {
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-        ab_mu ~ normal(0, 1);//normal(0.5, 0.5);//
+        ab_mu ~ normal(0.5, 0.5);//normal(0, 1);//
         ab_sd ~ exponential(1);//normal(0, 1);
         ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);
         ab_err ~ normal(0, 1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
