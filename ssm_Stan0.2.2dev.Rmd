@@ -55,8 +55,8 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 42#42#40#45#20 #200     # number of firms
-N = 4*16#18#15#5#15   #number of (quarterly) observations of a firm
+J = 45#42#40#45#20 #200     # number of firms
+N = 4*15#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 mu_base = -1.6
@@ -220,7 +220,7 @@ y_init = y_init,
 
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
-                 file = "simu_SSM0.2.1dev.stan",  # Stan program
+                 file = "simu_SSM0.2.2dev.stan",  # Stan program
 #                 file = "simu_SSM2.4.stan",  # Stan program
                  data=simu_SSM_data, iter=1, #seed=987,  
                  chains=1, algorithm="Fixed_param")  
@@ -296,11 +296,11 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 3000#1750#2000#3000
+n_iter = 2250#2000#3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 1000
 #n_warmup = n_iter/2 
-n_chains = 3#4#8
+n_chains = 4#8
 
 
 
@@ -581,26 +581,6 @@ plot(params.df$iter, params.df$sd_season, pch=16, cex=0.8, #col=c_dark,
     #   scale_x_continuous(breaks=c(3000, 3100, 3200))
 
 
-
-#====================================================
-    # mu_u1 = y_init = 4; mu_alpha = 0.1 #0.2; beta = 0.6 #0.85;  
-    # rho = 5,  
-    # s = c(0.4, 0.7, 0.5) 
-# p = c(-3.0, 0.13, -0.37) [rho=5]; 
-# g = c(0.5, -0.5, 1);     #[old] g = c(0.5, -0.8, 2.5)
-# w = c(-3, 7, 2)          #[old] w = c(-3.5, 7, 2)
-    # d = c(0.05, 0.7, 0.25) 
-# mu_season = c(-0.12, -0.06, 0.15), sd_season = 0.1; sd_pi = 0.05, 
-  # sd_y = 0.15; sd_base = 0.1, sd_gamma = 0.05, sd_omega = 0.1, 
-
-
-s = c(0.4, 0.7, 0.5)# # soft-clipping  rho=5
-S = length(s)
-
-# parameters of the data generation process of the temptation to do real EM
-p = c(0.37, 0.13)# middle: 3.0, 
-g = c(0.5, 0.5)#, 1) 
-w = c(3.7, 4.3)#, 0.6)
 
 ```
 
