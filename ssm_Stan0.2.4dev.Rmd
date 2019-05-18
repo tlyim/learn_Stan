@@ -55,7 +55,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 10#42#40#45#20 #200     # number of firms
+J = 5#42#40#45#20 #200     # number of firms
 N = 4*30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -296,11 +296,11 @@ SSM_data <- list(J = J,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-n_iter = 2250#2000#3000
+n_iter = 2#800#2000#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 1000
+n_warmup = 1#000
 #n_warmup = n_iter/2 
-n_chains = 4#8
+n_chains = 1#3#8
 
 
 
@@ -324,7 +324,7 @@ file = "SSM0.2.4dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.993,#9, 
+  control = list(adapt_delta = 0.999,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 14),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -417,7 +417,8 @@ mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "d[1]", "d[2]", "d
 
 
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "mu_alpha", "beta"))#, "g_mu[3]"))#,"w", "d"))
-mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "sd_y", "mu_base"))#, "sd_season"))#, mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "d[1]", "d[2]", "d[3]"))#, "g_mu[3]"))#,"w", "d"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "sd_y", "mu_base"))#, "sd_season"))#, 
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "d[1]", "d[2]", "d[3]"))#, "g_mu[3]"))#,"w", "d"))
 
 
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "mu_alpha", "beta"))#, "w_mu[3]"))#,"w", "d"))
