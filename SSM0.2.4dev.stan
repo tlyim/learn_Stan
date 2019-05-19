@@ -76,6 +76,30 @@ vector[K] g; // coefficients of the K covariates in matrix X
 vector[H] w; // coefficients of the H covariates in matrix G
 
 
+//===============================================================================
+p = 
+//p_raw = 
+    p_mu + p_sd .* (p_L * p_err);
+              //p[1] = p0[1];
+              //p[2] = p_raw[1];
+              //p[3] = p_raw[2];
+//===============================================================================
+g = 
+//g_raw = 
+    g_mu + g_sd .* (g_L * g_err);
+            //g[1] = g_raw[1];
+            //g[2] = g0[1];
+            //g[3] = g_raw[2];
+//===============================================================================
+w = 
+//w_raw = 
+    w_mu + w_sd .* (w_L * w_err);
+            //w[1] = w_raw[1];
+            //w[2] = w0[1];
+            //w[3] = w_raw[2];
+//===============================================================================
+
+
   for (j in 1:J) {
 
     real base[J];  // ,upper=1
@@ -92,20 +116,6 @@ vector[H] w; // coefficients of the H covariates in matrix G
             //vector[H_cor] w_raw; // non-centered vector of correlated coeffs in w
     
     
-//===============================================================================
-g = 
-//g_raw = 
-    g_mu + g_sd .* (g_L * g_err);
-            //g[1] = g_raw[1];
-            //g[2] = g0[1];
-            //g[3] = g_raw[2];
-//===============================================================================
-w = 
-//w_raw = 
-    w_mu + w_sd .* (w_L * w_err);
-            //w[1] = w_raw[1];
-            //w[2] = w0[1];
-            //w[3] = w_raw[2];
 //===============================================================================
 // Define accrual-based EM component
 // Define the raw (m) and net (D) accrual-based EM
@@ -137,13 +147,6 @@ w =
       }
       
 
-//===============================================================================
-p = 
-//p_raw = 
-    p_mu + p_sd .* (p_L * p_err);
-              //p[1] = p0[1];
-              //p[2] = p_raw[1];
-              //p[3] = p_raw[2];
 //===============================================================================
 // Define real EM component
     phi[j] = Z[j]*p;// temptation to manage current-period real earnings upward
@@ -185,7 +188,7 @@ model {
 
   // priors 
   mu_u1 ~ normal(0, 1); //student_t(3, 0, 1);//
-mu_alpha ~ normal(0, 1);//student_t(3, 0, 1);//exponential(2);//
+mu_alpha ~ uniform(0, 1);//normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//
   beta ~ normal(0.5, 0.5);
 //!!!  mu_season ~ normal(0, 1);
 
