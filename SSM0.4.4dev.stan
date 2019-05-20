@@ -65,8 +65,8 @@ parameters {
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 //
 //!!!  real mu_base;  
-  real<lower=0> sd_base; // sd of the hyperprior for gamma
-  real err_log_base[J];
+//  real<lower=0> sd_base; // sd of the hyperprior for gamma
+//  real err_log_base[J];
 }
 transformed parameters {
 //!!!  vector[Q] season_q[J];
@@ -137,10 +137,9 @@ w = //w_raw =
 // Define the raw (m) and net (D) accrual-based EM
 
     tau[j] = X[j]*g;// temptation to misreport
-
     chi[j] = -G[j]*w;// 
 
-    base[j] = exp( sd_base*err_log_base[j] ); //mu_base + 
+    base[j] = 1;// exp( sd_base*err_log_base[j] ); //mu_base + 
     b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
     R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) ) / log(2/(1+exp(-rho)));
 // The adjustment above ^^^ sets R[j] = 1 when chi[j] = 0 (because chi[j] cannot be negative in our case)
@@ -213,7 +212,7 @@ model {
 //!!!  mu_season ~ normal(0, 1);
 //!!!  sd_season ~ normal(0, 1);//exponential(1); //
   sd_y ~ exponential(1);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
-  mu_u1 ~ normal(0, 1); //student_t(3, 0, 1);//
+  mu_u1 ~ normal(0, 0.5);//1); //student_t(3, 0, 1);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
@@ -226,36 +225,37 @@ model {
 //  s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
-  p0 ~ normal(0, 1);//normal(0.5, 0.5);
-    p_mu ~ student_t(3,0,1);//4, 0, 1);// normal(0, 1);
-    p_sd ~ normal(0, 0.2);//0.25);//2);
-    p_L ~ lkj_corr_cholesky(2);
-    p_err ~ normal(0, 0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  p_mu ~ normal(0, 0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
+  p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
+  p_L ~ lkj_corr_cholesky(2);
+  p_err ~ normal(0, 0.1);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//
+    p0 ~ normal(0, 1);//normal(0.5, 0.5);
 //===============================================================================
 //  g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
         //g0 ~ normal(0, 1);//2);
-  g_mu ~ normal(0, 1);
-  g_sd ~ normal(0, 0.2);//2);
+  g_mu ~ normal(0, 0.5);//1);
+  g_sd ~ normal(0, 0.1);//0.2);
   g_L ~ lkj_corr_cholesky(2);
-  g_err ~ normal(0, 0.1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  g_err ~ normal(0, 0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //===============================================================================
 /*
 //    w ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 5);//10);//0); //0.2); //1);  // w_init
         //w0 ~ normal(0, 1);//2);
 */
-        w_mu ~ normal(0, 1);//student_t(3,0,1);//4, 0, 1);//
-        w_sd ~ normal(0, 0.2);//0.2);//2);
-        w_L ~ lkj_corr_cholesky(2);//2);
-        w_err ~ normal(0, 0.2);//0.2); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  w_mu ~ normal(0, 0.5);//1); //student_t(3,0,1);//4, 0, 1);//
+  w_sd ~ normal(0, 0.1);//0.2); //2);
+  w_L ~ lkj_corr_cholesky(2);
+  w_err ~ normal(0, 0.1);//0.2); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //===============================================================================
 //  d ~ dirichlet(rep_vector(0.1, L));   // = 1.0 means the dist is uniform over the possible simplices;<1.0 toward corners 
 //!!!  mu_base ~ normal(0, 1);
-  sd_base ~ normal(0, 1);
+//  sd_base ~ exponential(3);//normal(0, 1);
 
 
   for (j in 1:J) { 
 
-    err_log_base[j] ~ normal(0, 1);
+//    err_log_base[j] ~ normal(0, 1);
 //!!!    season_raw[j] ~ normal(mu_season, sd_season);
 
     err_y[j] ~ normal(0, sd_y);

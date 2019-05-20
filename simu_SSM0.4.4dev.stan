@@ -120,7 +120,7 @@ generated quantities {
     tau[j] = X[j]*g;// temptation to misreport
     chi[j] = -G[j]*w;// 
 
-    base[j] = exp( sd_base*normal_rng(0,1) ); //mu_base + 
+    base[j] = 1;//exp( sd_base*normal_rng(0,1) ); //mu_base + 
     b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
     R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) ) / log(2/(1+exp(-rho)));
 // The adjustment above ^^^ sets R[j] = 1 when chi[j] = 0 (because chi[j] cannot be negative in our case)
