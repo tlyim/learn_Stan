@@ -7,10 +7,10 @@ fig_height: 6
 
 ```{r}
 
-#knitr::purl("ssm_Stan0.4.6Adev.Rmd", output = "ssm_Stan0.4.6Adev.R", documentation = 2)
-# .libPaths()
-# .libPaths( c( "~/R_library/3.5", .libPaths() ) )
-# .libPaths()
+#knitr::purl("ssm_Stan0.4.6dev.Rmd", output = "ssm_Stan0.4.6dev.R", documentation = 2)
+.libPaths()
+.libPaths( c( "~/R_library/3.5", .libPaths() ) )
+.libPaths()
 
 #library(tidyverse)
 library(dplyr)
@@ -218,7 +218,7 @@ mu_u1 = mu_u1,
 
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
-                 file = "simu_SSM0.4.5dev.stan",  # Stan program
+                 file = "simu_SSM0.4.6dev.stan",  # Stan program
 #                 file = "simu_SSM2.4.stan",  # Stan program
                  data=simu_SSM_data, iter=1, #seed=987,  
                  chains=1, algorithm="Fixed_param")  
@@ -300,7 +300,7 @@ system.time({
 fit2 <- stan(
 #fit1 <- stan(
   
-file = "SSM0.4.6Adev.stan",  # Stan program
+file = "SSM0.4.6dev.stan",  # Stan program
 #  file = "SSM2.4.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
