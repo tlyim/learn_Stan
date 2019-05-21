@@ -19,7 +19,7 @@ library(magrittr)
 #load previously saved Stan model objects
 #load(file = "StanObjects.rda")
 
-library(shinystan)
+#library(shinystan)
 library(bayesplot)
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
@@ -431,19 +431,20 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 #library(shinystan)
 #??? ss_complete_pool <- extract(fit2);
 
-ss_output <- launch_shinystan(as.shinystan(fit2, 
-                              pars=c(
-                                     "ab_mu", "ab_sd", "ab_L", "ab_L", "ab_err", 
-                                     "mu_alpha", "beta", #"mu_base", #"theta", "sd_base", #"rho", 
-              "sd_y", #"sd_season", "mu_season", #"s", "p", 
-#              "ab_mu", "ab_sd", "ab_L",
-#              "p_mu", "p_sd", "p_L",
-#              "g_mu", "g_sd", "g_L",
-#              "w_mu", "w_sd", "w_L",
-#              "p",
-#              "g", "w", "d", 
-              "mu_u1"
-              )))
+#ss_output <- launch_shinystan(as.shinystan(fit2, 
+#                              pars=c(
+#                                     "ab_mu", "ab_sd", "ab_L", "ab_L", "ab_err", 
+#                                     "mu_alpha", "beta", #"mu_base", #"theta", "sd_base", #"rho", 
+#              "sd_y", #"sd_season", "mu_season", #"s", "p", 
+
+           #              "ab_mu", "ab_sd", "ab_L",
+           #              "p_mu", "p_sd", "p_L",
+           #              "g_mu", "g_sd", "g_L",
+           #              "w_mu", "w_sd", "w_L",
+           #              "p",
+           #              "g", "w", "d", 
+#              "mu_u1"
+#              )))
 
 
 #' 

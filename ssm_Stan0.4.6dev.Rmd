@@ -19,7 +19,7 @@ library(magrittr)
 #load previously saved Stan model objects
 #load(file = "StanObjects.rda")
 
-library(shinystan)
+#library(shinystan)
 library(bayesplot)
 library(rstan)
 rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
@@ -418,7 +418,7 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 
 
 
-```{r} 
+```{r, eval=F}
 
         # mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "g_sd[3]", "g_err[3]"))
         # mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "mu_u1", "sd_y"))
@@ -497,7 +497,7 @@ mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "d[1]", "d[2]", "d[3]")
 
 
 # g
-```{r} 
+```{r, eval=F}
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_sd[1]", "g_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_err[1]", "g_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_err[1]", "g_err[2]"))
@@ -554,7 +554,7 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "g_err[1]", "g_e
 
 
 # w
-```{r} 
+```{r, eval=F} 
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_sd[1]", "w_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_err[1]", "w_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_err[1]", "w_err[2]"))
@@ -621,7 +621,7 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "w_err[1]", "w_e
 
 
 # More pairs plot
-```{r} 
+```{r, eval=F}
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p0[1]", "p_sd[1]", "p_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p0[1]", "p_err[1]", "p_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("p_sd[1]", "p_sd[2]", "p_err[1]", "p_err[2]"))
@@ -676,7 +676,7 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_u1", "sd_y")
 
 
 
-```{r} 
+```{r, eval=F} 
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_sd[1]", "ab_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_err[1]", "ab_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_sd[1]", "ab_sd[2]", "ab_err[1]", "ab_err[2]"))
@@ -756,21 +756,22 @@ mcmc_pairs(posterior, np = np, pars = c("mu_alpha", "beta", "mu_u1", "sd_y"))
 ```
 
 
-```{r}
+```{r, eval=F}
 #library(shinystan)
 #??? ss_complete_pool <- extract(fit2);
 
+library(shinystan)
 ss_output <- launch_shinystan(as.shinystan(fit2, 
                               pars=c(
                                      "ab_mu", "ab_sd", "ab_L", "ab_L", "ab_err", 
                                      "mu_alpha", "beta", #"mu_base", #"theta", "sd_base", #"rho", 
               "sd_y", #"sd_season", "mu_season", #"s", "p", 
-#              "ab_mu", "ab_sd", "ab_L",
-#              "p_mu", "p_sd", "p_L",
-#              "g_mu", "g_sd", "g_L",
-#              "w_mu", "w_sd", "w_L",
-#              "p",
-#              "g", "w", "d", 
+                 # "ab_mu", "ab_sd", "ab_L",
+                 # "p_mu", "p_sd", "p_L",
+                 # "g_mu", "g_sd", "g_L",
+                 # "w_mu", "w_sd", "w_L",
+                 # "p",
+                 # "g", "w", "d",
               "mu_u1"
               )))
 
