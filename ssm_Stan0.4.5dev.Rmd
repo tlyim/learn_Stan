@@ -56,7 +56,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 30#5#15#10#5#42#40#45#20 #200     # number of firms
+J = 50#5#15#10#5#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -83,7 +83,7 @@ sd_season = 0.1
 
 
 # parameters of the DGP of the likelihood of using sales- vs. RnD-based real EM (sigma = 1 or 0)
-s = c(0.7, 0.5)# # soft-clipping  rho=5
+s = c(0, 0.7, 0.5)# # soft-clipping  rho=5
 #s = c(0.4, 0.7, 0.5)# # soft-clipping  rho=5
 S = length(s)
 
@@ -134,7 +134,7 @@ df2mat.l <- function(z){
 # T.l captures firm characteristics related to whether firms are more likely to use sales- vs. RnD-based real EM
 T.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
-#  constant = rep(1, J*N),
+  constant = rep(1, J*N),
   IsRetailer = rbinom(J*N, 1, IsRetailer_freq),
   NoReportedRnD = rbinom(J*N, 1, NoReportedRnD_freq)#,
  ) %>%
@@ -421,7 +421,7 @@ mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "w_mu[3]", "g_err[3]", "w_err
 # theta = 0.1; rho = 5,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.4, 0.7, 0.5) 
+# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5)  
   # p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
   # g = c(0, 0.11, 0.22)       
   # w = c(0, 0.43, 0.85) 
@@ -430,64 +430,47 @@ mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "w_mu[3]", "g_err[3]", "w_err
 ```
 
 
+all crossovers
 ```{r} 
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_mu[3]", "w_mu[1]", "w_mu[2]", "w_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_mu[3]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_mu[3]", "ab_mu[1]", "ab_mu[2]", "sd_y"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_mu[3]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_mu[3]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_mu[3]", "ab_mu[1]", "ab_mu[2]", "sd_y"))
+mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_mu[3]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "ab_mu[1]", "ab_mu[2]", "sd_y"))
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "sd_y", "d[1]", "d[2]", "d[3]"))
 
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "w_mu[1]", "p_mu[1]", "d[1]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[2]", "w_mu[2]", "p_mu[2]", "d[2]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "w_mu[3]", "p_mu[3]", "d[3]", "ab_mu[1]", "ab_mu[2]"))
 
-
-mcmc_pairs(posterior, np = np, pars = c("sd_base", "gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]"))
-mcmc_pairs(posterior, np = np, pars = c("sd_base", "gw_sd[1]", "gw_sd[2]", "gw_sd[3]", "gw_sd[4]"))
-mcmc_pairs(posterior, np = np, pars = c("sd_base", "gw_err[1]", "gw_err[2]", "gw_err[3]", "gw_err[4]"))
-
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_err[1]", "gw_sd[1]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_err[2]", "gw_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_err[3]", "gw_sd[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_err[4]", "gw_sd[4]"))
-#mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_err[5]", "gw_sd[5]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_err[1]", "gw_sd[1]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_err[2]", "gw_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_err[3]", "gw_sd[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_err[4]", "gw_sd[4]"))
-#mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "gw_err[5]", "gw_sd[5]"))
-
-mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "gw_mu[1]", "gw_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]",  "gw_mu[3]", "gw_mu[4]"))#, "gw_mu[5]"))
-#mcmc_pairs(posterior, np = np, pars = c("p_mu[3]", "gw_mu[3]", "gw_mu[4]"))#, "gw_mu[5]"))
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "gw_mu[1]", "gw_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "gw_mu[3]", "gw_mu[4]"))#, "gw_mu[5]"))
-
-mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "gw_mu[1]", "gw_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "gw_mu[3]", "gw_mu[4]"))#, "gw_mu[5]"))
-mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
-mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
-
-mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "gw_mu[1]", "gw_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "gw_mu[3]", "gw_mu[4]"))#, "gw_mu[5]"))
-mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
-mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "d[1]", "d[2]", "d[3]"))
-
-
-#====================================================
-  # mu_u1 = y_LT = 0.25; mu_alpha = 0.1; beta = 0.6;  
-# theta = 0.1; rho = 5,  
-  # sd_base = 0.2; mu_base = -1.6 
-  # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.4, 0.7, 0.5) 
-  # p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
-  # g = c(0.3, 0.23)       
-  # w = c(0.11, 0.24, 0.2)
-  # d = c(0.05, 0.7, 0.25) 
-
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "w_mu[1]", "p_mu[1]", "d[1]", "sd_y", "mu_u1"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[2]", "w_mu[2]", "p_mu[2]", "d[2]", "sd_y", "mu_u1"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "w_mu[3]", "p_mu[3]", "d[3]", "sd_y", "mu_u1"))
 ```
 
 
 # g
 ```{r} 
+mcmc_pairs(posterior, np = np, pars = c("g_err[1]", "g_err[2]", "g_err[3]", "w_err[1]", "w_err[2]", "w_err[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_err[1]", "g_err[2]", "g_err[3]", "p_err[1]", "p_err[2]", "p_err[3]"))
+mcmc_pairs(posterior, np = np, pars = c("w_err[1]", "w_err[2]", "w_err[3]", "p_err[1]", "p_err[2]", "p_err[3]"))
+
+
+mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_sd[3]", "w_sd[1]", "w_sd[2]", "w_sd[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_sd[3]", "p_sd[1]", "p_sd[2]", "p_sd[3]"))
+mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_sd[3]", "p_sd[1]", "p_sd[2]", "p_sd[3]"))
+
+
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_sd[1]", "g_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_err[1]", "g_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_err[1]", "g_err[2]"))
-mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_L[2,1]", "g_L[2,2]"))
-mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_L[2,1]", "g_L[2,2]"))
-mcmc_pairs(posterior, np = np, pars = c("g_err[1]", "g_err[2]", "g_L[2,1]", "g_L[2,2]"))
+# mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "g_L[2,1]", "g_L[2,2]"))
+# mcmc_pairs(posterior, np = np, pars = c("g_sd[1]", "g_sd[2]", "g_L[2,1]", "g_L[2,2]"))
+# mcmc_pairs(posterior, np = np, pars = c("g_err[1]", "g_err[2]", "g_L[2,1]", "g_L[2,2]"))
 
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "p_mu[1]", "p_mu[2]"))
 mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "p_sd[1]", "p_sd[2]"))
@@ -530,8 +513,8 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "g_err[1]", "g_e
   # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.7, 0.5) 
   # p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
-  # g = c(0.3, 0.23)       
-  # w = c(0.11, 0.24, 0.2)
+  # g = c(0, 0.11, 0.22)       
+  # w = c(0, 0.43, 0.85) 
   # d = c(0.05, 0.7, 0.25) 
 
 ```
@@ -542,9 +525,9 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "g_err[1]", "g_e
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_sd[1]", "w_sd[2]"))
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_err[1]", "w_err[2]"))
 mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_err[1]", "w_err[2]"))
-mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_L[2,1]", "w_L[2,2]"))
-mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_L[2,1]", "w_L[2,2]"))
-mcmc_pairs(posterior, np = np, pars = c("w_err[1]", "w_err[2]", "w_L[2,1]", "w_L[2,2]"))
+# mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_L[2,1]", "w_L[2,2]"))
+# mcmc_pairs(posterior, np = np, pars = c("w_sd[1]", "w_sd[2]", "w_L[2,1]", "w_L[2,2]"))
+# mcmc_pairs(posterior, np = np, pars = c("w_err[1]", "w_err[2]", "w_L[2,1]", "w_L[2,2]"))
 
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "p_mu[1]", "p_mu[2]"))
 mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "p_sd[1]", "p_sd[2]"))
@@ -596,8 +579,8 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "w_err[1]", "w_e
   # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.7, 0.5) 
   # p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
-  # g = c(0.3, 0.23)       
-  # w = c(0.11, 0.24, 0.2)
+  # g = c(0, 0.11, 0.22)       
+  # w = c(0, 0.43, 0.85) 
   # d = c(0.05, 0.7, 0.25) 
 
 ```
@@ -652,8 +635,8 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_u1", "sd_y")
   # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.7, 0.5) 
   # p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
-  # g = c(0.3, 0.23)       
-  # w = c(0.11, 0.24, 0.2)
+  # g = c(0, 0.11, 0.22)       
+  # w = c(0, 0.43, 0.85) 
   # d = c(0.05, 0.7, 0.25) 
 ```
 

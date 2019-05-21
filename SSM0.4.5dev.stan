@@ -115,7 +115,7 @@ vector[H] w; // coefficients of the H covariates in matrix G
 //!!!
 //===============================================================================
       ab = ab_mu + ab_sd .* (ab_L * ab_err);
-      mu_alpha = ab[1];
+      mu_alpha = inv_logit(ab[1]);
       beta = ab[2];
 //===============================================================================
 p = //p_raw 
@@ -137,7 +137,7 @@ gw = gw_mu + gw_sd .* (gw_L * gw_err);
 g_raw = g_mu + g_sd .* (g_L * g_err);
     g[1] = g_raw[1];
     g[2] = g_raw[2];
-    g[3] = g_raw[3]; 
+    g[3] = exp(g_mu[3] - 1); //exp(g_raw[3]); 
 //    g[3] = exp(g_raw[3]);
 //===============================================================================
 w = //w_raw = 
@@ -243,24 +243,26 @@ model {
   // priors 
 //!!!  mu_season ~ normal(0, 1);
 //!!!  sd_season ~ normal(0, 1);//exponential(1); //
-  sd_y ~ exponential(1);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
-  mu_u1 ~ normal(0, 0.5);//1); //student_t(3, 0, 1);//
+  sd_y ~ exponential(2);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
+  mu_u1 ~ normal(0, 0.2);//0.5);//1); //student_t(3, 0, 1);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu ~ normal(0.5, 0.5);//normal(0, 1);//
-  ab_sd ~ normal(0, 0.05);//25);//0.5);//1);//exponential(1);//
+  ab_mu[1] ~ normal(0, 0.2);//normal(0, 1);//
+  ab_mu[2] ~ normal(0.5, 0.2);//normal(0, 1);//
+//  ab_mu ~ normal(0.5, 0.25);//normal(0, 1);//
+  ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
   ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);
-  ab_err ~ normal(0, 0.1);//25);//0.5);//1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  ab_err ~ normal(0, 0.05);//0.1);//25);//0.5);//1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 
 //!!!  theta ~ normal(0, 1);  
 //  s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
-  p_mu ~ normal(0, 0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
+  p_mu ~ normal(0, 0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
   p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
   p_L ~ lkj_corr_cholesky(2);
-  p_err ~ normal(0, 0.1);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  p_err ~ normal(0, 0.05);//0.1);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //
 //    p0 ~ normal(0, 0.5);//1);//normal(0.5, 0.5);
 
@@ -276,16 +278,18 @@ model {
 //===============================================================================
 //  g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
         //g0 ~ normal(0, 1);//2);
-  g_mu ~ normal(0, 0.5);//1);
+  g_mu[1:2] ~ normal(0, 0.15);//0.2);//1);
+  g_mu[3] ~ normal(0, 0.15);//normal(-1, 0.15);//0.2);//1);
+//  g_mu[3] ~ normal(0, 0.2);//1);
   g_sd ~ normal(0, 0.1);//0.2);
   g_L ~ lkj_corr_cholesky(2);
-  g_err ~ normal(0, 0.1);//0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  g_err ~ normal(0, 0.05);//0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //===============================================================================
 //    w ~ normal(0, 0.5);//1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 5);//10);//0); //0.2); //1);  // w_init
-  w_mu ~ normal(0, 0.5);//1); //student_t(3,0,1);//4, 0, 1);//
+  w_mu ~ normal(0, 0.15);//0.2);//1); //student_t(3,0,1);//4, 0, 1);//
   w_sd ~ normal(0, 0.1);//0.2); //2);
   w_L ~ lkj_corr_cholesky(2);
-  w_err ~ normal(0, 0.1);//0.2); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+  w_err ~ normal(0, 0.05);//0.1);//0.2); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //!!!    w0 ~ normal(0, 0.5);//1);//2);
 //===============================================================================
 
