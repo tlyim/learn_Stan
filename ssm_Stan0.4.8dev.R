@@ -286,7 +286,7 @@ SSM_data <- list(J = J,
 #' # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ## ------------------------------------------------------------------------
 
-n_iter = 2000#2000#3000
+n_iter = 2000#3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 1000
 #n_warmup = n_iter/2 
@@ -313,7 +313,7 @@ file = "SSM0.4.8dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.9 ,#9, 
+  control = list(adapt_delta = 0.8,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -436,4 +436,5 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
   # g = c(0.3, 0.2, 0.4) 
   # w = c(0.72, 0.15, 0.62) 
 # d = c(0.05, 0.7, 0.25) 
+
 
