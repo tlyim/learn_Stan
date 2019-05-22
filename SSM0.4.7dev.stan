@@ -275,11 +275,11 @@ model {
 //!!!  mu_season ~ normal(0, 1);
 //!!!  sd_season ~ normal(0, 1);//exponential(1); //
   sd_y ~ exponential(2);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
-  mu_u1 ~ normal(0, 0.2);//1); //student_t(3, 0, 1);//
+  mu_u1 ~ normal(0, 0.5);//1); //student_t(3, 0, 1);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu[1] ~ normal(0, 0.15);//0.2);//normal(0, 1);//
+  ab_mu[1] ~ normal(0.5, 0.15);//0.2);//normal(0, 1);//
   ab_mu[2] ~ normal(0.5, 0.15);//0.2);//normal(0, 1);//
 //  ab_mu ~ normal(0.5, 0.25);//normal(0, 1);//
   ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
@@ -300,7 +300,7 @@ model {
 
 //!!!
 //===============================================================================
-  gw_mu ~ normal(0, 0.1);//0.15);//0.2);//1);
+  gw_mu ~ normal(0, 0.2);//0.15);//0.2);//1);
   gw_sd ~ normal(0, 0.05);//0.2);
   gw_L ~ lkj_corr_cholesky(2);
   gw_err ~ normal(0, 0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
