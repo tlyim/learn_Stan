@@ -61,14 +61,14 @@ Q = 4 # quarterly time series
 rho = 1#2#5  # curvature of the soft-clipping function; rho=50 would make nearly hard-clipping
 mu_base = -1.6
 sd_base = 0.2 #0.05  
-mu_alpha = 0.1#0.2  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+mu_alpha = 0.04 #0.1#0.2  # intercept parameter of the AR(1) processs of the underlying unbiased figure
 #mu_alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
 beta = 0.6#0.85  # slope parameter of the AR(1) processs of the underlying unbiased figure
-theta = 0.07 #0.1 # real EM's LT impact on alpha[j,n]
+theta = 0.15 #0.2 #0.1 # real EM's LT impact on alpha[j,n]
 y_LT = mu_alpha/(1-beta)
 mu_u1 = y_LT # initial y for data simulation set to three times of the LT stationary level
 ab_mu = c(mu_alpha, beta)
-sd_y = 0.15  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
+sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
 mu_season = c(-0.12, -0.06, 0.15)
 sd_season = 0.1
 
@@ -95,15 +95,15 @@ I = length(p) # soft-clipping  rho=5
 
 # parameters of the data generation process of the temptation to misreport
 #g = c(0.77, 0.5) #c(0.5, 0.5)
-g = c(0, 0.11, 0.22) #[before rescaled X2] g = c(0.03, 2.3)   # g = c(0.5, 1)
-#g = c(0.5, 0.5, 1) 
+g = c(0.3, 0.2, 0.4) 
+#g = c(0, 0.11, 0.22) #[before rescaled X2] g = c(0.03, 2.3)   # g = c(0.5, 1)
 K = length(g)
 
 # parameters of the data generation process of the strength of governance and monitoring 
 # (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 #w = c(0.1, 0.57) #w = c(0, 0)
     #w = c(0, 0.43, 0.85) 
-w = c(0.11, 0.24, 0.2)  
+w = c(0.72, 0.15, 0.62)  
 #[old] w = c(3.7, 4.3, 0.6)
 H = length(w)
 
@@ -174,9 +174,9 @@ get_ratioNED <- function(ratioNED_req, J, N) {
 # covariate matrix G capturing the strength of internal governance and external monitoring mechansims
 G.l <- data.frame(
   gvkey = rep(1:J, times=N), # note the difference from times=N
-  constant = (-10)*rep(1, J*N),
+  constant = (1)*rep(1, J*N),
   ratioNED = (10)*get_ratioNED(ratioNED_req, J, N), 
-  Big4 = (1)*rbinom(J*N, 1, Big4_freq)#,
+  Big4 = (2)*rbinom(J*N, 1, Big4_freq)#,
   ) %>%
   df2mat.l()
 # G.l %>%  arrange(gvkey) %>% head(120)
@@ -234,6 +234,10 @@ b.mat <- extract(simu_fit)$b[1,,]
 R.mat <- extract(simu_fit)$R[1,,]
 
 Real.mat[1,] %>% round(4)
+Real.mat %>% round(4) %>%  mean()
+Real.mat %>% round(4) %>%  median()
+Real.mat %>% round(4) %>%  max()
+Real.mat %>% round(4) %>%  min()
 cat("\n\n")
 r.mat[1,] %>% round(4)
 y.mat[1,] %>% round(4)
@@ -248,8 +252,12 @@ b.mat %>% round(4) %>%  min()
 R.mat[1,] %>% round(4)
 R.mat %>% round(4) %>%  max()
 R.mat %>% round(4) %>%  min()
-
+cat("\n\n")
 m.mat[1,] %>% round(4)
+D.mat[1,] %>% round(4)
+D.mat %>% round(4) %>%  mean()
+D.mat %>% round(4) %>%  max()
+D.mat %>% round(4) %>%  min()
 
 # Prepare SSM data for estimation using MCMC
 #N_new = 3
@@ -329,6 +337,17 @@ file = "SSM0.4.8dev.stan",  # Stan program
 #' 
 #' # Summary of the posterior sample 
 ## ------------------------------------------------------------------------
+#====================================================
+  # mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1,  
+  # sd_base = 0.2; mu_base = -1.6 
+  # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
+  # p = c(0.62, 0.45, 0.3) 
+  # g = c(0.3, 0.2, 0.4) 
+  # w = c(0.72, 0.15, 0.62) 
+# d = c(0.05, 0.7, 0.25) 
+#====================================================
 print(fit2, c(
               "mu_u1", 
               "mu_alpha", "beta", #"rho", 
@@ -345,18 +364,6 @@ print(fit2, c(
               "ab_mu", "ab_sd", "ab_L", "ab_err"
               ), 
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-
-#====================================================
-  # mu_u1 = y_LT = 0.25; mu_alpha = 0.1; beta = 0.6;  
-# theta = 0.07; rho = 5,  
-  # sd_base = 0.2; mu_base = -1.6 
-  # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
-  # p = c(0.62, 0.45, 0.3) #old:p = c(0.8, 0.6, 0.3) ; p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
-  # g = c(0, 0.11, 0.22)       
-  # w = c(0.11, 0.24, 0.2)   #old: w = c(0, 0.43, 0.85) 
-  # d = c(0.05, 0.7, 0.25) 
-#====================================================
 
 
 #' 
@@ -420,13 +427,13 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 
 
 #====================================================
-  # mu_u1 = y_LT = 0.25; mu_alpha = 0.1; beta = 0.6;  
-# theta = 0.07; rho = 5,  
+  # mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
-  # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-  # s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
-# p = c(0.62, 0.45, 0.3) #old:p = c(0.8, 0.6, 0.3) ; p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
-# g = c(0, 0.11, 0.22)       
-# w = c(0.11, 0.24, 0.2)   #old: w = c(0, 0.43, 0.85) 
+  # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
+  # p = c(0.62, 0.45, 0.3) 
+  # g = c(0.3, 0.2, 0.4) 
+  # w = c(0.72, 0.15, 0.62) 
 # d = c(0.05, 0.7, 0.25) 
 
