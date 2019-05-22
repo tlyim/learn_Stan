@@ -56,7 +56,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 30#10#5#42#40#45#20 #200     # number of firms
+J = 10#10#5#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -315,7 +315,7 @@ file = "SSM0.4.8dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.9 ,#9, 
+  control = list(adapt_delta = 0.8,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -366,13 +366,6 @@ print(fit2, c(
               "ab_mu", "ab_sd", "ab_L", "ab_err"
               ), 
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-
-
-
-
- 
-
-
 
 ```
 
@@ -448,9 +441,17 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 
 ```
 
-
-
 ```{r, eval=F}
+  # mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1,  
+  # sd_base = 0.2; mu_base = -1.6 
+  # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
+  # p = c(0.62, 0.45, 0.3) 
+  # g = c(0.3, 0.2, 0.4) 
+  # w = c(0.72, 0.15, 0.62) 
+# d = c(0.05, 0.7, 0.25) 
+#====================================================
 
         # mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "g_sd[3]", "g_err[3]"))
         # mcmc_pairs(posterior, np = np, pars = c("g_mu[3]", "mu_u1", "sd_y"))

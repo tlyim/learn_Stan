@@ -301,7 +301,18 @@ theta ~ normal(0.5, 0.5);//~ normal(0, 1);
 
 //!!!
 //===============================================================================
-  gw_mu ~ normal(0, 0.2);//0.15);//0.2);//1);
+gw_mu[1] ~ normal(0.5, 0.2);
+//assumed gw[1]=g[1] is unlikely to be negative when 
+//  X1 = 0.5, ie, the CEO's attitude is neutral in reporting (neither aggr. or conservative)
+//  X2 = 0, ie, no downgrade-driven temptation to do aggressive reporting  
+gw_mu[4] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
+//assumed gw[4]=w[1] is unlikely to be negative (note: = -Gw), ie, the max amount manipulatable 
+//  by accrual-based EM is unlikely to exceed 50% point even when there's no gatekeeping at all, ie,
+//  Z1 = 0, ie, % of NED = 0
+//  Z2 = 0, ie, audited by non-Big4
+  gw_mu[2:3] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
+  gw_mu[5:6] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
+  
   gw_sd ~ normal(0, 0.1);//0.05);//0.2);
   gw_L ~ lkj_corr_cholesky(2);
   gw_err ~ normal(0, 0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
