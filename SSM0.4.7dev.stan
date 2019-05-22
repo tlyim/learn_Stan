@@ -291,7 +291,7 @@ model {
 //  s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
-  p_mu ~ normal(0, 0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
+  p_mu ~ normal(0, 0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
   p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
   p_L ~ lkj_corr_cholesky(2);
   p_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
