@@ -17,7 +17,7 @@ data {
   matrix[N,H] G[J]; // covariates (capturing the strength of internal governance and external monitoring mechansims)
 }
 transformed data {
-real<lower=0> theta = 0.1; //reduction in alpha[j,n] from the initial level (mu_alpha) due to real EM's LT impact 
+//real<lower=0> theta = 0.1; //reduction in alpha[j,n] from the initial level (mu_alpha) due to real EM's LT impact 
   
   int<lower=0> I_cor = I;//2; // number of correlated coefficents in p for covariate matrix Z
   int<lower=0> K_cor = K; // number of correlated coefficents in p for covariate matrix Z
@@ -26,7 +26,7 @@ real<lower=0> theta = 0.1; //reduction in alpha[j,n] from the initial level (mu_
 parameters {
   real mu_u1;
 //!!!
-//!!!  real<lower=0> theta = 0.1; //reduction in alpha[j,n] from the initial level (mu_alpha) due to real EM's LT impact 
+real<lower=0> theta; //reduction in alpha[j,n] from the initial level (mu_alpha) due to real EM's LT impact 
 //===============================================================================
 //!!!  real<lower=0,upper=1> mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
 //!!!  real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
@@ -270,17 +270,17 @@ model {
 
   // priors 
 
-//!!!  theta ~ normal(0, 1);  
+theta ~ normal(0.5, 0.5);//~ normal(0, 1);  
 
 //!!!  mu_season ~ normal(0, 1);
 //!!!  sd_season ~ normal(0, 1);//exponential(1); //
   sd_y ~ exponential(2);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
-  mu_u1 ~ normal(0, 0.5);//1); //student_t(3, 0, 1);//
+  mu_u1 ~ normal(0, 1);//0.5);// //student_t(3, 0, 1);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu[1] ~ normal(0.5, 0.15);//0.2);//normal(0, 1);//
-  ab_mu[2] ~ normal(0.5, 0.15);//0.2);//normal(0, 1);//
+  ab_mu[1] ~ normal(0.5, 0.25);//0.2);//normal(0, 1);//
+  ab_mu[2] ~ normal(0.5, 0.25);//0.2);//normal(0, 1);//
 //  ab_mu ~ normal(0.5, 0.25);//normal(0, 1);//
   ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
   ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);
@@ -290,7 +290,7 @@ model {
 //  s ~ normal(0, 1);//5);//student_t(4, 0, 1);//
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
-  p_mu ~ normal(0, 0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
+  p_mu ~ normal(0, 0.2);//0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
   p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
   p_L ~ lkj_corr_cholesky(2);
   p_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
@@ -301,7 +301,7 @@ model {
 //!!!
 //===============================================================================
   gw_mu ~ normal(0, 0.2);//0.15);//0.2);//1);
-  gw_sd ~ normal(0, 0.05);//0.2);
+  gw_sd ~ normal(0, 0.1);//0.05);//0.2);
   gw_L ~ lkj_corr_cholesky(2);
   gw_err ~ normal(0, 0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //===============================================================================

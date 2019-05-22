@@ -332,7 +332,7 @@ file = "SSM0.4.7dev.stan",  # Stan program
 print(fit2, c(
               "mu_u1", 
               "mu_alpha", "beta", #"rho", 
-              "sd_y", #"sd_base", #"mu_base", #"theta", #"sd_season", "mu_season", 
+              "sd_y", "theta", #"sd_base", #"mu_base", #"sd_season", "mu_season", 
               #"s",
               "p",
               "g", 
@@ -376,26 +376,26 @@ color_scheme_set("gray") #"darkgray")
 #The non-centered parameterization avoids this by sampling the eta parameter which, unlike theta, is a priori independent of tau. Then theta is computed deterministically from the parameters eta, mu and tau afterwards. Here’s the same plot as above, but with eta[1] from non-centered parameterization instead of theta[1] from the centered parameterization:
 
 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_sd[3]", "gw_err[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_sd[4]", "gw_err[4]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "mu_u1", "sd_y"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_err[3]", "gw_err[4]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_sd[3]", "gw_sd[4]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "mu_u1", "sd_y"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "d[1]", "d[2]", "d[3]"))
 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[1]", "gw_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_sd[1]", "gw_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_err[1]", "gw_err[2]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_mu[1]", "gw_mu[2]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_sd[1]", "gw_sd[2]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_err[1]", "gw_err[2]"))
 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "gw_mu[6]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_sd[5]", "gw_sd[6]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_err[5]", "gw_err[6]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "gw_mu[6]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_err[5]", "gw_err[6]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_sd[5]", "gw_sd[6]"))
 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "p_sd[1]", "p_sd[2]", "p_sd[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "p_err[1]", "p_err[2]", "p_err[3]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "p_err[1]", "p_err[2]", "p_err[3]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "p_sd[1]", "p_sd[2]", "p_sd[3]"))
 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "ab_mu[1]", "ab_mu[2]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "ab_sd[1]", "ab_sd[2]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "ab_sd[1]", "ab_sd[2]"))
 
 
 mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "gw_mu[6]"))
