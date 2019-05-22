@@ -197,7 +197,8 @@ vector[N] alpha[J];
 //    b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
     b[j] = 2*inv_logit(rho*tau[j]) - 1;
 //    R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
-    R[j] = 2*inv_logit( rho*chi[j] );//+ rep_vector(sd_base*err_log_base[j], N) );
+    R[j] = //2*
+            inv_logit( rho*chi[j] );//+ rep_vector(sd_base*err_log_base[j], N) );
 //    R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) ) / log(2/(1+exp(-rho)));
 // The adjustment above ^^^ sets R[j] = 1 when chi[j] = 0 (because chi[j] cannot be negative in our case)
     m[j] = base[j] * b[j] .* R[j];  // extent of misreporting resulting from bias effort 
@@ -279,8 +280,8 @@ theta ~ normal(0.5, 0.5);//~ normal(0, 1);
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu[1] ~ normal(0.5, 0.25);//0.2);//normal(0, 1);//
-  ab_mu[2] ~ normal(0.5, 0.25);//0.2);//normal(0, 1);//
+  ab_mu[1] ~ normal(0.5, 0.5);//0.25);//0.2);//normal(0, 1);//
+  ab_mu[2] ~ normal(0.5, 0.5);//0.25);//0.2);//normal(0, 1);//
 //  ab_mu ~ normal(0.5, 0.25);//normal(0, 1);//
   ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
   ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);

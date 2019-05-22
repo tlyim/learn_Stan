@@ -125,7 +125,8 @@ generated quantities {
 //    b[j] = 2*( log1p_exp(rho*tau[j]) - log1p_exp(rho*(tau[j]-1)) )/rho - 1;
     b[j] = 2*inv_logit(rho*tau[j]) - 1;
 //    R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
-    R[j] = 2*inv_logit( rho*chi[j] );//+ rep_vector(sd_base*normal_rng(0,1), N) );
+    R[j] = //2*
+            inv_logit( rho*chi[j] );//+ rep_vector(sd_base*normal_rng(0,1), N) );
 //    R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) ) / log(2/(1+exp(-rho)));
 // The adjustment above ^^^ sets R[j] = 1 when chi[j] = 0 (because chi[j] cannot be negative in our case)
 //    R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
