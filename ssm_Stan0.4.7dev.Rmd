@@ -56,7 +56,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 20#10#5#42#40#45#20 #200     # number of firms
+J = 30#10#5#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -305,7 +305,7 @@ file = "SSM0.4.7dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.95,#9, 
+  control = list(adapt_delta = 0.9,#9, 
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -346,6 +346,17 @@ print(fit2, c(
               ), 
       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
 
+#====================================================
+  # mu_u1 = y_LT = 0.25; mu_alpha = 0.1; beta = 0.6;  
+# theta = 0.1; rho = 5,  
+  # sd_base = 0.2; mu_base = -1.6 
+  # sd_y = 0.15, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
+  # p = c(0.7, 0.3, 0.13)  # soft-clipping [rho=5]; 
+  # g = c(0, 0.11, 0.22)       
+  # w = c(0, 0.43, 0.85) 
+  # d = c(0.05, 0.7, 0.25) 
+#====================================================
 
 posterior <- as.array(fit2)
 lp <- log_posterior(fit2)

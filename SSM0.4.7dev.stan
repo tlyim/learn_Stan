@@ -100,7 +100,6 @@ transformed parameters {
   vector[N] err_y[J];
 //!!!    vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
   vector[N] m[J]; // misreporting extent in the reported figures 
-//!!!  vector[N] alpha[J];
 
 //!!!
 //  vector[I_cor] p_raw; // coefficients of the H covariates in matrix G
@@ -129,7 +128,7 @@ vector[K+H] gw; // modeling g and w together to capture their correlations
 //!!!
 //===============================================================================
       ab = ab_mu + ab_sd .* (ab_L * ab_err);
-      mu_alpha = inv_logit(ab[1]);
+      mu_alpha = ab[1];//inv_logit(ab[1]);
       beta = ab[2];
 //===============================================================================
 p = //p_raw 
@@ -175,6 +174,7 @@ w = //w_raw =
 
   for (j in 1:J) {
 
+vector[N] alpha[J];
     real base[J];  // ,upper=1
     vector[N] tau[J]; // temptation to misreport
     vector[N] chi[J]; // 
@@ -238,32 +238,31 @@ w = //w_raw =
 //===============================================================================
 
 
-err_y[j,1] = r[j,1] - mu_u1
-                  - Real[j,1]
-                  - D[j,1];
-//err_y[j,2:N] = r[j,2:N] - (mu_alpha + beta*r[j,1:(N-1)]) 
-err_y[j,2:N] = r[j,2:N] 
-                  - ( mu_alpha - theta*sum(Real[j,1:(N-1)]) + beta*r[j,1:(N-1)] ) 
-                  - (Real[j,2:N] - beta*Real[j,1:(N-1)])
-                  - (D[j,2:N] - beta*D[j,1:(N-1)]);
-//!!!     u[j] = r[j];// - D[j];// - Real[j];
-
-
-//!!! 
-//===============================================================================
-// Define real EM's LT impact on alpha
-//    alpha[j,1] = mu_alpha;
-//    for (n in 2:N) {
-//      alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
-//      }
-//===============================================================================
-
 //!!!
 //===============================================================================
 // Define seasaonality component
 //    season_q[j] = append_row( season_raw[j], -sum(season_raw[j]) );
 //    season_n[j,1:N] = season_q[j,q[1:N]];
 //===============================================================================
+
+
+//!!! 
+//===============================================================================
+// Define real EM's LT impact on alpha
+alpha[j,1] = mu_alpha;  
+for (n in 2:N) {
+  alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1]; 
+  }
+//===============================================================================
+
+  err_y[j,1] = r[j,1] - mu_u1
+                  - Real[j,1]
+                  - D[j,1];
+
+  err_y[j,2:N] = r[j,2:N] 
+                  - ( mu_alpha - alpha[j,2:N] + beta*r[j,1:(N-1)] ) 
+                  - (Real[j,2:N] - beta*Real[j,1:(N-1)])
+                  - (D[j,2:N] - beta*D[j,1:(N-1)]);
 
     }
 }

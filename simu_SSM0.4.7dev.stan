@@ -52,7 +52,7 @@ generated quantities {
   vector[N] m[J]; // misreporting extent in the reported figures 
   vector[N] D[J];
 
-//!!!  vector[N] alpha[J]; // 
+  vector[N] alpha[J];  
 //!!!  vector[Q-1] season_raw[J];
 //!!!  vector[Q] season_q[J];
 //!!!  vector[N] season_n[J];
@@ -99,13 +99,14 @@ generated quantities {
 
 //===============================================================================
 // Define real EM's LT impact on alpha
-//!!!    alpha[j,1] = mu_alpha;  
+    alpha[j,1] = mu_alpha;  
     u[j,1] = //season_n[j,1] + 
               mu_u1 + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
     for (n in 2:N) {
-//!!!      alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
+      alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
       u[j,n] = //season_n[j,n] + 
-                  mu_alpha - theta*sum(Real[j,1:(N-1)]) //alpha[j,n]  //<---------------------------
+                  mu_alpha - alpha[j,n]  //<---------------------------
+//                  mu_alpha - theta*sum(Real[j,1:(N-1)])
                   + beta*u[j,n-1] 
 //                  - sigma[j,n-1] .* Real[j,n-1] 
                   + sd_y*normal_rng(0,1);
