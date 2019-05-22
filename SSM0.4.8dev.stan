@@ -261,7 +261,7 @@ for (n in 2:N) {
                   - D[j,1];
 
   err_y[j,2:N] = r[j,2:N] 
-                  - ( mu_alpha - alpha[j,2:N] + beta*r[j,1:(N-1)] ) 
+                  - ( alpha[j,2:N] + beta*r[j,1:(N-1)] ) 
                   - (Real[j,2:N] - beta*Real[j,1:(N-1)])
                   - (D[j,2:N] - beta*D[j,1:(N-1)]);
 
