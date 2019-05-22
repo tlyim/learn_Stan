@@ -238,7 +238,9 @@ w = //w_raw =
 //===============================================================================
 
 
-err_y[j,1] = r[j,1] - mu_u1;
+err_y[j,1] = r[j,1] - mu_u1
+                  - Real[j,1]
+                  - D[j,1];
 //err_y[j,2:N] = r[j,2:N] - (mu_alpha + beta*r[j,1:(N-1)]) 
 err_y[j,2:N] = r[j,2:N] 
                   - ( mu_alpha - theta*sum(Real[j,1:(N-1)]) + beta*r[j,1:(N-1)] ) 
