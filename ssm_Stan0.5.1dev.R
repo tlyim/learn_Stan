@@ -55,7 +55,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 80#42#40#45#20 #200     # number of firms
+J = 90#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -82,37 +82,31 @@ sd_season = 0.1
 
 
 # parameters of the DGP of the likelihood of using sales- vs. RnD-based real EM (sigma = 1 or 0)
-s = c(0, 0.75, 0.18)# # soft-clipping  rho=5
-#s = c(0.4, 0.7, 0.5)# # soft-clipping  rho=5
+s = c(0.4, 0.15, 0.15) # s = c(0.4, 0.15, 0.15) 
 S = length(s)
 
 # parameters of the data generation process of the temptation to do real EM
-#p = c(0.95, 0.7)# middle: 3.0, 
-#!!! p = c(-0.22, 3.0, 0.13) # exp(p[1]) = 0.802
-#p = c(3.0, 0.13) 
-p = c(0.62, 0.45, 0.3) #
-#p = c(0.7, 0.3, 0.13) #[before rescaling Z2] c(0.7, 3.0, 0.13)
+p = c(0.7, 0.72, 0.42) # p = c(0.7, 0.72, 0.42)
+# each factor contributes only 1-1.1% but both together can go up to 16% pt. of real EM
 I = length(p) # soft-clipping  rho=5
 
 # parameters of the data generation process of the temptation to misreport
 #g = c(0.77, 0.5) #c(0.5, 0.5)
-g = c(0.3, 0.2, 0.4) 
-#g = c(0, 0.11, 0.22) #[before rescaled X2] g = c(0.03, 2.3)   # g = c(0.5, 1)
+g = c(0.2, 0.2, 0.25) # g = c(0.2, 0.2, 0.25) 
 K = length(g)
 
 # parameters of the data generation process of the strength of governance and monitoring 
 # (eg, audit committee chair with financial expertise, big 4 auditor, etc)
 #w = c(0.1, 0.57) #w = c(0, 0)
     #w = c(0, 0.43, 0.85) 
-w = c(0.72, 0.15, 0.62)  
-#[old] w = c(3.7, 4.3, 0.6)
+w = c(0.72, 0.15, 0.62) # w = c(0.72, 0.15, 0.62) 
 H = length(w)
 
 d = c(0.05, 0.7, 0.25) # fractional reversal of prior-period manipluation by accruals
 L = length(d)
 
 NoReportedRnD_freq = 0.85
-IsRetailer_freq = 0.7
+IsRetailer_freq = 0.55
 ratioNED_req = 0.25 #0.3  # min ratio of non-executive directors (NED) required by law
 Big4_freq = 0.7#0.6
 downgrade_freq = 0.3 #0.5
@@ -136,8 +130,8 @@ df2mat.l <- function(z){
 T.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
   constant = rep(1, J*N),
-  IsRetailer = rbinom(J*N, 1, IsRetailer_freq),
-  NoReportedRnD = (10)*rbinom(J*N, 1, NoReportedRnD_freq)#,
+  NoReportedRnD = (10)*( rbinom(J*N, 1, NoReportedRnD_freq) - NoReportedRnD_freq ),
+  IsRetailer = (10)*( rbinom(J*N, 1, IsRetailer_freq) - IsRetailer_freq )#,
  ) %>%
   df2mat.l()
 
@@ -145,8 +139,8 @@ T.l <- data.frame(
 Z.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
   constant = (-10)*rep(1, J*N),
-  distortion = (10)*rbeta(J*N, 3*(1-integrity), 3*integrity),#*rbeta(J*N, integrity, 1-integrity), 
-  downgrade = rbinom(J*N, 1, downgrade_freq)#,
+  distortion = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - (1-integrity) ),
+  downgrade = (10)*( rbinom(J*N, 1, downgrade_freq) - downgrade_freq )#,
 #constant = rep(1, J*N)#,
  ) %>%
   df2mat.l()
@@ -156,7 +150,7 @@ Z.l <- data.frame(
 X.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
   constant = rep(1, J*N),
-  aggressive = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - 0.5 ), 
+  aggressive = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - 0.4 ),  #(1-integrity)
   downgrade = (10)*rbinom(J*N, 1, downgrade_freq)#,
   ) %>%
   df2mat.l()
@@ -262,6 +256,10 @@ D.mat %>% round(4) %>%  max()
 D.mat %>% round(4) %>%  min()
 cat("\n\n")
 sigma.mat[1,] %>% round(4)
+sigma.mat %>% round(4) %>%  mean()
+sigma.mat %>% round(4) %>%  median()
+sigma.mat %>% round(4) %>%  max()
+sigma.mat %>% round(4) %>%  min()
 
 # Prepare SSM data for estimation using MCMC
 #N_new = 3
@@ -345,10 +343,10 @@ file = "SSM0.5.1dev.stan",  # Stan program
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.75, 0.18)   
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 #====================================================
 print(fit2, c(
@@ -399,9 +397,16 @@ mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.75, 0.18)   
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 
+
+
+## ------------------------------------------------------------------------
+sessionInfo()
+
+#' 
+#' 
