@@ -385,6 +385,7 @@ color_scheme_set("gray") #"darkgray")
 #The main problem is that large steps are required to explore the less narrow regions efficiently, but those steps become too large for navigating the narrow region. The required step size is connected to the value of tau. When tau is large it allows for large variation in theta (and requires large steps) while small tau requires small steps in theta.
 #The non-centered parameterization avoids this by sampling the eta parameter which, unlike theta, is a priori independent of tau. Then theta is computed deterministically from the parameters eta, mu and tau afterwards. Here’s the same plot as above, but with eta[1] from non-centered parameterization instead of theta[1] from the centered parameterization:
 
+
 mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "s[1]", "s[2]", "s[3]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[1]", "s[2]", "s[3]"))
 mcmc_pairs(posterior, np = np, pars = c("theta", "mu_season[1]", "s[1]", "s[2]", "s[3]"))
@@ -394,6 +395,7 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[5]", "gw_mu[6]", "s[1]", "s[2]", 
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "s[1]", "s[2]", "s[3]"))
 mcmc_pairs(posterior, np = np, pars = c("p_mu[3]", "d[1]", "s[1]", "s[2]", "s[3]"))
 mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
+
 
 
 ```
