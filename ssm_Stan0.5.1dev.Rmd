@@ -94,7 +94,7 @@ I = length(p) # soft-clipping  rho=5
 
 # parameters of the data generation process of the temptation to misreport
 #g = c(0.77, 0.5) #c(0.5, 0.5)
-g = c(0.2, 0.2, 0.25) #0.2, 0.25, 0.2  # g = c(0.5, 0.25, 0.2)  
+g = c(0.2, 0.2, 0.25) # g = c(0.2, 0.2, 0.25) 
 K = length(g)
 
 # parameters of the data generation process of the strength of governance and monitoring 
@@ -345,10 +345,10 @@ file = "SSM0.5.1dev.stan",  # Stan program
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.41, 0.14, 0.52)
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.5, 0.25, 0.2)  
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 #====================================================
 print(fit2, c(
@@ -399,10 +399,10 @@ mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.41, 0.14, 0.52)
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.5, 0.25, 0.2)  
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 
 ```
@@ -433,10 +433,10 @@ mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[3]"))
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.41, 0.14, 0.52)
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.5, 0.25, 0.2)  
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 
 mcmc_pairs(posterior, np = np, pars = c("theta", "gw_mu[3]", "gw_mu[4]", "gw_err[3]", "gw_err[4]"))
@@ -486,10 +486,10 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0.41, 0.14, 0.52)
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.5, 0.25, 0.2)  
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 
 ```
@@ -499,10 +499,10 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
-  # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
-  # w = c(0.72, 0.15, 0.62) 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.72, 0.42)  
+  # g = c(0.2, 0.2, 0.25)  
+  # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 #====================================================
 
