@@ -57,7 +57,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 50#42#40#45#20 #200     # number of firms
+J = 10#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -84,8 +84,7 @@ sd_season = 0.1
 
 
 # parameters of the DGP of the likelihood of using sales- vs. RnD-based real EM (sigma = 1 or 0)
-s = c(0, 0.75, 0.18)# # soft-clipping  rho=5
-#s = c(0.4, 0.7, 0.5)# # soft-clipping  rho=5
+s = c(0.41, 0.14, 0.52)
 S = length(s)
 
 # parameters of the data generation process of the temptation to do real EM
@@ -98,7 +97,9 @@ I = length(p) # soft-clipping  rho=5
 
 # parameters of the data generation process of the temptation to misreport
 #g = c(0.77, 0.5) #c(0.5, 0.5)
-g = c(0.3, 0.2, 0.4) 
+g = c(0.5, 0.25, 0.2)  
+#g = c(0.3, 0.2, 0.4) 
+#
 #g = c(0, 0.11, 0.22) #[before rescaled X2] g = c(0.03, 2.3)   # g = c(0.5, 1)
 K = length(g)
 
@@ -114,7 +115,7 @@ d = c(0.05, 0.7, 0.25) # fractional reversal of prior-period manipluation by acc
 L = length(d)
 
 NoReportedRnD_freq = 0.85
-IsRetailer_freq = 0.7
+IsRetailer_freq = 0.55
 ratioNED_req = 0.25 #0.3  # min ratio of non-executive directors (NED) required by law
 Big4_freq = 0.7#0.6
 downgrade_freq = 0.3 #0.5
@@ -138,8 +139,8 @@ df2mat.l <- function(z){
 T.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
   constant = rep(1, J*N),
-  IsRetailer = rbinom(J*N, 1, IsRetailer_freq),
-  NoReportedRnD = (10)*rbinom(J*N, 1, NoReportedRnD_freq)#,
+  NoReportedRnD = (10)*( rbinom(J*N, 1, NoReportedRnD_freq) - NoReportedRnD_freq ),
+  IsRetailer = (1)*( rbinom(J*N, 1, IsRetailer_freq) - IsRetailer_freq)#,
  ) %>%
   df2mat.l()
 
@@ -264,6 +265,10 @@ D.mat %>% round(4) %>%  max()
 D.mat %>% round(4) %>%  min()
 cat("\n\n")
 sigma.mat[1,] %>% round(4)
+sigma.mat %>% round(4) %>%  mean()
+sigma.mat %>% round(4) %>%  median()
+sigma.mat %>% round(4) %>%  max()
+sigma.mat %>% round(4) %>%  min()
 
 # Prepare SSM data for estimation using MCMC
 #N_new = 3
@@ -347,9 +352,9 @@ file = "SSM0.5.1dev.stan",  # Stan program
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.75, 0.18)   
+# s = c(0.41, 0.14, 0.52)
   # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
+  # g = c(0.5, 0.25, 0.2)  
   # w = c(0.72, 0.15, 0.62) 
 # d = c(0.05, 0.7, 0.25) 
 #====================================================
@@ -401,11 +406,31 @@ mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.75, 0.18)   
+# s = c(0.41, 0.14, 0.52)
   # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
+  # g = c(0.5, 0.25, 0.2)  
   # w = c(0.72, 0.15, 0.62) 
 # d = c(0.05, 0.7, 0.25) 
+
+```
+
+
+```{r}
+
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "gw_mu[2]", "gw_mu[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[2]", "gw_mu[3]", "theta"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "theta"))
+
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[2]", "gw_mu[3]", "s[1]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[2]", "gw_mu[3]", "s[2]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[2]", "gw_mu[3]", "s[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[1]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[2]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[3]"))
+
+
 
 ```
 
@@ -415,9 +440,9 @@ mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.75, 0.18)   
+# s = c(0.41, 0.14, 0.52)
   # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
+  # g = c(0.5, 0.25, 0.2)  
   # w = c(0.72, 0.15, 0.62) 
 # d = c(0.05, 0.7, 0.25) 
 
@@ -468,9 +493,9 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[6]", "p_mu[3]", "d[3]
 # theta = 0.15; rho = 1,  
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
-# s = c(0, 0.7, 0.5)  #old: s = c(0.4, 0.7, 0.5) 
+# s = c(0.41, 0.14, 0.52)
   # p = c(0.62, 0.45, 0.3) 
-  # g = c(0.3, 0.2, 0.4) 
+  # g = c(0.5, 0.25, 0.2)  
   # w = c(0.72, 0.15, 0.62) 
 # d = c(0.05, 0.7, 0.25) 
 
