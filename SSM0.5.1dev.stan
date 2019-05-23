@@ -271,7 +271,7 @@ s ~ normal(0.5, 0.2);//0, 0.2);
 
 //!!!
 //===============================================================================
-gw_mu ~ normal(0.5, 0.2);
+gw_mu ~ exponential(2); #normal(0.5, 0.2);
   //gw_mu[1] ~ normal(0.5, 0.2);
   //gw_mu[4] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
 //assumed gw[1]=g[1] is unlikely to be negative when 
