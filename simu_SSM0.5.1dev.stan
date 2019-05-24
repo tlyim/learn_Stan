@@ -31,6 +31,7 @@ real<lower=0> sd_base; // sd of the hyperprior for base
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 }
 transformed data {
+real p3 = (-10)*0.7;
 }
 parameters {}
 model {}
@@ -101,7 +102,8 @@ vector[N] zeta[J]; // temptation to manage current-period real earnings upward
 
 //===============================================================================
 // Define real EM component
-    phi[j] = Z[j]*p;//[2:I];// temptation to manage current-period real earnings upward
+phi[j] = rep_vector(p3, N) + 
+          Z[j]*p;//[2:I];// temptation to manage current-period real earnings upward
     Real[j] = ( log1p_exp(rho*phi[j]) - log1p_exp(rho*(phi[j]-1)) )/rho;
 //===============================================================================
 
@@ -111,9 +113,10 @@ vector[N] zeta[J]; // temptation to manage current-period real earnings upward
     alpha[j,1] = mu_alpha;  
     u[j,1] = season_n[j,1] + mu_u1 + sd_y*normal_rng(0,1);   // y should be nonnegative for Rev and nonpositive for Costs
     for (n in 2:N) {
-      alpha[j,n] = alpha[j,n-1] - (1 - sigma[j,n-1]) .* (theta*Real[j,n-1]); //- theta*Real[j,n-1];  
+//      alpha[j,n] = alpha[j,n-1] - (1 - sigma[j,n-1]) .* (theta*Real[j,n-1]); //- theta*Real[j,n-1];  
+      alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1];  
       u[j,n] = season_n[j,n] + alpha[j,n] + beta*u[j,n-1] 
-                  - sigma[j,n-1] .* Real[j,n-1] 
+//                  - sigma[j,n-1] .* Real[j,n-1] 
                   + sd_y*normal_rng(0,1);
       }
 

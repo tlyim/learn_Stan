@@ -17,6 +17,7 @@ data {
   matrix[N,H] G[J]; // covariates (capturing the strength of internal governance and external monitoring mechansims)
 }
 transformed data {
+  real p3 = (-10)*0.7; //<--------------------------------
 //!!!
   int<lower=0> I_cor = I;//2; // number of correlated coefficents in p for covariate matrix Z
   int<lower=0> K_cor = K; // number of correlated coefficents in p for covariate matrix Z
@@ -33,28 +34,28 @@ real<lower=0> theta; //reduction in alpha[j,n] from the initial level (mu_alpha)
 //===============================================================================
 //!!!  real<lower=0,upper=1> mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
 //!!!  real<lower=0,upper=1> beta; // slope coefficient of the AR(1) process of y[n]
-            vector[2] ab_mu; // vector of means for correlated coeffs in w
-            vector<lower=0>[2] ab_sd; // vector of sd for correlated coeffs in w
-            cholesky_factor_corr[2] ab_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-            vector[2] ab_err; // primitive vector of correlated coeffs in w
+    vector[2] ab_mu; //<lower=0,upper=1> vector of means for correlated coeffs in w
+    vector<lower=0>[2] ab_sd; // vector of sd for correlated coeffs in w
+    cholesky_factor_corr[2] ab_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+    vector[2] ab_err; // primitive vector of correlated coeffs in w
 //===============================================================================
 
-vector[S] s; // coefficients of the S covariates in matrix T
+//vector[S] s; // coefficients of the S covariates in matrix T
 //===============================================================================
 //  vector[I] p; // coefficients of the K covariates in matrix Z
 //            vector[I - I_cor] p0; //,upper=1 vector of means for correlated coeffs in w
-            vector[I_cor] p_mu; // vector of means for correlated coeffs in w
-            vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
-            cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-            vector[I_cor] p_err; // primitive vector of correlated coeffs in w
+    vector[I_cor] p_mu; // vector of means for correlated coeffs in w
+    vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
+    cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+    vector[I_cor] p_err; // primitive vector of correlated coeffs in w
 //===============================================================================
 //  vector[K] g; // coefficients of the K covariates in matrix X
             //vector[K - K_cor] g0; // vector of means for correlated coeffs in w
 //!!! Trying to require >= 0 to get ride of an unreasonable second mode             
-            vector<lower=0>[K+H] gw_mu; // vector of means for correlated coeffs in w
-            vector<lower=0>[K+H] gw_sd; // vector of sd for correlated coeffs in w
-            cholesky_factor_corr[K+H] gw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-            vector[K+H] gw_err; // primitive vector of correlated coeffs in w
+vector<lower=0>[K+H] gw_mu; //<lower=0> vector of means for correlated coeffs in w
+    vector<lower=0>[K+H] gw_sd; // vector of sd for correlated coeffs in w
+    cholesky_factor_corr[K+H] gw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+    vector[K+H] gw_err; // primitive vector of correlated coeffs in w
 /*
 real g1;
 real g2;
@@ -94,7 +95,7 @@ vector[N] season_n[J];
   vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
   vector[N] m[J]; // misreporting extent in the reported figures 
 
-vector[N] sigma[J]; // fraction of real EM that is shifting from next period's sales
+//vector[N] sigma[J]; // fraction of real EM that is shifting from next period's sales
   // sigma = 0 means  the real EM is either 
   //    (i) purely RnD-based or 
   //    (ii) sales-based but not by shifting next period's sales forward
@@ -129,8 +130,8 @@ vector[H_cor] w_mu; // vector of means for correlated coeffs in w
   p = p_mu + p_sd .* (p_L * p_err);
 //===============================================================================
   gw = gw_mu + gw_sd .* (gw_L * gw_err);
-    g = gw[1:3];
-    w = gw[4:6];
+    g = gw[1:K];
+    w = gw[K+1:K+H];
 //===============================================================================
 
 
@@ -183,15 +184,16 @@ vector[N] zeta[J]; // temptation to manage current-period real earnings upward
       
 //===============================================================================
 // Define real EM component
-    phi[j] = Z[j]*p;//[2:I];// temptation to manage current-period real earnings upward
+phi[j] = rep_vector(p3, N) + 
+          Z[j]*p;//[2:I];// temptation to manage current-period real earnings upward
     Real[j] = ( log1p_exp(rho*phi[j]) - log1p_exp(rho*(phi[j]-1)) )/rho;
 //===============================================================================
 
 
 //===============================================================================
 // Define the fraction of real EM that is sales-based and due to shfiting next period's sales forward
-zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
-sigma[j] = inv_logit(zeta[j]);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
+      //zeta[j] = T[j]*s;// temptation to manage current-period real earnings upward
+      //sigma[j] = inv_logit(zeta[j]);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j]-1)) )/rho;
 // fraction of Real[j] that is sales-based, rather than RnD-based,
 //   where T indicates whether j is a retailer and has RnD spending or not reported in last period
 //===============================================================================
@@ -208,7 +210,8 @@ sigma[j] = inv_logit(zeta[j]);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j
 // Define real EM's LT impact on alpha
   alpha[j,1] = mu_alpha;  
   for (n in 2:N) {
-    alpha[j,n] = alpha[j,n-1] - (1 - sigma[j,n-1]) .* (theta*Real[j,n-1]); 
+    alpha[j,n] = alpha[j,n-1] - theta*Real[j,n-1]; 
+//    alpha[j,n] = alpha[j,n-1] - (1 - sigma[j,n-1]) .* (theta*Real[j,n-1]); 
     }
 //===============================================================================
 
@@ -229,8 +232,8 @@ sigma[j] = inv_logit(zeta[j]);//( log1p_exp(rho*zeta[j]) - log1p_exp(rho*(zeta[j
                   - D[j,1];
 
   err_y[j,2:N] = r[j,2:N] 
-                  - ( season_n[j,2:N] + alpha[j,2:N] + beta*r[j,1:(N-1)] 
-                                                     - sigma[j,1:(N-1)] .* Real[j,1:(N-1)] ) 
+                  - ( season_n[j,2:N] + alpha[j,2:N] + beta*r[j,1:(N-1)] )
+//                                                     - sigma[j,1:(N-1)] .* Real[j,1:(N-1)] ) 
                                              // fraction of Real[j] that is sales-based, rather than RnD-based,
                   - ( Real[j,2:N] - beta*Real[j,1:(N-1)] )
                   - ( D[j,2:N] - beta*D[j,1:(N-1)] );
@@ -241,27 +244,27 @@ model {
 
   // priors 
 
-  sd_y ~ exponential(2);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
+  sd_y ~ exponential(5);//2);//normal(0, 1); //sd_y ~ exponential(1); //sd_y ~ student_t(3, 0, 1); 
+sd_season ~ normal(0, 0.2);//exponential(5);////0.5);//1);//exponential(1); //
 mu_season ~ normal(0, 0.2);//0.5);//1);
-sd_season ~ normal(0, 0.2);//0.5);//1);//exponential(1); //
 
   mu_u1 ~ normal(0, 0.5);//0.5);// //student_t(3, 0, 1);//
-  theta ~ normal(0.5, 0.5);//~ normal(0, 1);  
+theta ~ normal(0.5, 0.5);//~ normal(0, 1);   exponential(2);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu[1] ~ normal(0.5, 0.5);//0.25);//0.2);//normal(0, 1);//
-  ab_mu[2] ~ normal(0.5, 0.5);//0.25);//0.2);//normal(0, 1);//
+  ab_mu[1] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+  ab_mu[2] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
   
   ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
   ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);
   ab_err ~ normal(0, 0.05);//0.1);//25);//0.5);//1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 
 
-s ~ normal(0.5, 0.2);//0, 0.2);
+#s ~ normal(0.5, 0.2);//0, 0.2);
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
-  p_mu ~ normal(0, 0.2);//0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
+  p_mu ~ normal(0.5, 0.2);//0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
   p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
   p_L ~ lkj_corr_cholesky(2);
   p_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
@@ -271,7 +274,7 @@ s ~ normal(0.5, 0.2);//0, 0.2);
 
 //!!!
 //===============================================================================
-gw_mu ~ exponential(2); #normal(0.5, 0.2);
+gw_mu ~ normal(0, 0.63);//note: half-normal(0.63) has mean around 0.5;//normal(0.5, 0.2);//exponential(2); //
   //gw_mu[1] ~ normal(0.5, 0.2);
   //gw_mu[4] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
 //assumed gw[1]=g[1] is unlikely to be negative when 
