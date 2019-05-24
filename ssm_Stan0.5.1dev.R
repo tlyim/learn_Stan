@@ -55,7 +55,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 90#42#40#45#20 #200     # number of firms
+J = 80#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -86,19 +86,18 @@ s = c(0.4, 0.15, 0.15) # s = c(0.4, 0.15, 0.15)
 S = length(s)
 
 # parameters of the data generation process of the temptation to do real EM
-p = c(0.7, 0.72, 0.42) # p = c(0.7, 0.72, 0.42)
+p = c(0.72, 0.42)#, 0.7) # p[3] is constant and hard-coded
+# p = c(0.7, 0.72, 0.42) # p[1] is constant
 # each factor contributes only 1-1.1% but both together can go up to 16% pt. of real EM
 I = length(p) # soft-clipping  rho=5
 
 # parameters of the data generation process of the temptation to misreport
-#g = c(0.77, 0.5) #c(0.5, 0.5)
-g = c(0.2, 0.2, 0.25) # g = c(0.2, 0.2, 0.25) 
+g = c(0.85, 0.35) 
+# g = c(0.2, 0.2, 0.25) 
 K = length(g)
 
 # parameters of the data generation process of the strength of governance and monitoring 
 # (eg, audit committee chair with financial expertise, big 4 auditor, etc)
-#w = c(0.1, 0.57) #w = c(0, 0)
-    #w = c(0, 0.43, 0.85) 
 w = c(0.72, 0.15, 0.62) # w = c(0.72, 0.15, 0.62) 
 H = length(w)
 
@@ -138,10 +137,10 @@ T.l <- data.frame(
 # make Z.l different from X.l to avoid less than full rank in estimation
 Z.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
-  constant = (-10)*rep(1, J*N),
+#  constant = (-10)*rep(1, J*N),
   distortion = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - (1-integrity) ),
   downgrade = (10)*( rbinom(J*N, 1, downgrade_freq) - downgrade_freq )#,
-#constant = rep(1, J*N)#,
+#constant = (-10)*rep(1, J*N)#,
  ) %>%
   df2mat.l()
 
@@ -150,8 +149,8 @@ Z.l <- data.frame(
 X.l <- data.frame(
   gvkey = rep(1:J, times=N),                   
   constant = rep(1, J*N),
-  aggressive = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - 0.4 ),  #(1-integrity)
-  downgrade = (10)*rbinom(J*N, 1, downgrade_freq)#,
+  aggressive = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - 0.4 )#,  #(1-integrity)
+#  downgrade = (10)*rbinom(J*N, 1, downgrade_freq)#,
   ) %>%
   df2mat.l()
 
@@ -315,7 +314,7 @@ file = "SSM0.5.1dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.8,#9, 
+  control = list(adapt_delta = 0.8,#8, #9
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -344,15 +343,15 @@ file = "SSM0.5.1dev.stan",  # Stan program
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.72, 0.42)  
-  # g = c(0.2, 0.2, 0.25)  
+  # p = c(0.72, 0.42) # w/constant: p = c(0.7, 0.72, 0.42)  
+  # g = c(0.85, 0.35) #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 #====================================================
 print(fit2, c(
               "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
               "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
-              "s",
+#              "s",
               "p",
               "g", 
               "w", 
@@ -379,18 +378,32 @@ color_scheme_set("gray") #"darkgray")
 
 #http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 #The main problem is that large steps are required to explore the less narrow regions efficiently, but those steps become too large for navigating the narrow region. The required step size is connected to the value of tau. When tau is large it allows for large variation in theta (and requires large steps) while small tau requires small steps in theta.
-#The non-centered parameterization avoids this by sampling the eta parameter which, unlike theta, is a priori independent of tau. Then theta is computed deterministically from the parameters eta, mu and tau afterwards. Here’s the same plot as above, but with eta[1] from non-centered parameterization instead of theta[1] from the centered parameterization:
+#The non-centered parameterization avoids this by sampling the eta parameter which, unlike theta, is a priori independent of tau. Then theta is computed deterministically from the parameters eta, mu and tau afterwards. Here’s the same plot as above, but with eta[1] from non-centered parameterization instead of theta[1] from the centered parameterization: 
 
-mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("theta", "mu_season[1]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("mu_season[2]", "mu_season[3]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[5]", "gw_mu[6]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("p_mu[3]", "d[1]", "s[1]", "s[2]", "s[3]"))
-mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("theta", "mu_season[1]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "theta", "mu_season[1]"))#"p_mu[3]",
+mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "mu_season[2]", "mu_season[3]")) #"p_mu[3]", 
+mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]")) 
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "p_mu[1]", "p_mu[2]"))#, "p_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]"))#, "p_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
 
 #====================================================
   # mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
@@ -398,11 +411,10 @@ mcmc_pairs(posterior, np = np, pars = c("d[2]", "d[3]", "s[1]", "s[2]", "s[3]"))
   # sd_base = 0.2; mu_base = -1.6 
   # sd_y = 0.08, sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.72, 0.42)  
-  # g = c(0.2, 0.2, 0.25)  
+  # p = c(0.72, 0.42) # w/constant: p = c(0.7, 0.72, 0.42)  
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
-
 
 
 ## ------------------------------------------------------------------------
