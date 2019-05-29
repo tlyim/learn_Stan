@@ -34,5 +34,5 @@ simu_SSM2.2_forum.stan
 SSM2.2_forum.stan
 *.rda
 Rplots*.pdf
-Rplot001.png
+*.png
 *.Rout

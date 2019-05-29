@@ -290,12 +290,12 @@ rho = rho,
 # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ```{r}
 
-#pdf("Rplots_0.8,1000.pdf")
+#pdf("Rplots_FREEp1,1.5K,120,0.95,4ch.pdf")
 n_iter = 2250#2000#3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 1000
 #n_warmup = n_iter/2 
-n_chains = 4
+n_chains = 6#4
 
 
 
@@ -319,6 +319,7 @@ file = "SSM0.5.2dev.stan",  # Stan program
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
   control = list(adapt_delta = 0.99,#8, #9
+#                 metric = "dense_e",
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -352,6 +353,8 @@ file = "SSM0.5.2dev.stan",  # Stan program
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
 #====================================================
+get_num_leapfrog_per_iteration(fit2)
+
 print(fit2, c(
               "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
               "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
@@ -460,6 +463,7 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[2]", "gw_mu[3]", "s[3]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[1]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[2]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[3]"))
+
 
 ```
 
