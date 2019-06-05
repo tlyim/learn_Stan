@@ -7,7 +7,7 @@ fig_height: 6
 
 ```{r}
 
-#knitr::purl("ssm_Stan0.5.2dev.Rmd", output = "ssm_Stan0.5.2dev.R", documentation = 2)
+#knitr::purl("ssm_Stan0.5.2.Rmd", output = "ssm_Stan0.5.2.R", documentation = 2)
 .libPaths()
 .libPaths( c( "~/R_library/3.5", .libPaths() ) )
 #.libPaths( c( .libPaths(), "~/R_library/3.5" ) )
@@ -215,7 +215,7 @@ rho = rho,
 
 # Simulate SSM data
 simu_fit <- stan(#model_code = simu_SSM@model_code,
-                 file = "simu_SSM0.5.2dev.stan",  # Stan program
+                 file = "simu_SSM0.5.2.stan",  # Stan program
 #                 file = "simu_SSM2.4.stan",  # Stan program
                  data=simu_SSM_data, iter=1, #seed=987,  
                  chains=1, algorithm="Fixed_param")  
@@ -315,7 +315,7 @@ system.time({
 fit2 <- stan(
 #fit1 <- stan(
   
-file = "SSM0.5.2dev.stan",  # Stan program
+file = "SSM0.5.2.stan",  # Stan program
 #  file = "SSM2.4.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
