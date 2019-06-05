@@ -55,7 +55,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 120#42#40#45#20 #200     # number of firms
+J = 90#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -288,8 +288,8 @@ rho = rho,
 #' # Fit the full model (by referring to the debug model) to estimate underlying parameters
 ## ------------------------------------------------------------------------
 
-pdf("Rplots_120,0.99.pdf")
-n_iter = 2250#2000#3000
+pdf("Rplots_FREEp1,2K,90,0.8,4ch.pdf")
+n_iter = 2000#3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 1000
 #n_warmup = n_iter/2 
@@ -316,7 +316,8 @@ file = "SSM0.5.2dev.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.99,#8, #9
+  control = list(adapt_delta = 0.8,#85, #9
+#		 metric = "dense_e",
 #                 stepsize = 0.05, #0.05, #0.01
                  max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
@@ -406,6 +407,10 @@ mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "p_mu[1]", "p_mu
 mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[3]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
+
+
+get_num_leapfrog_per_iteration(fit2)
+
 
 #====================================================
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
