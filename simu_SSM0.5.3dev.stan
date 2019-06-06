@@ -31,7 +31,7 @@ real<lower=0> sd_base; // sd of the hyperprior for base
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 }
 transformed data {
-real p3 = (-10)*0.7;
+// real p3 = (-10)*0.7;
 }
 parameters {}
 model {}
