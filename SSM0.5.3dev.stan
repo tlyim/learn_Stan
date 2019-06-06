@@ -223,7 +223,7 @@ phi[j] = //rep_vector(p3, N) +
     u[j,2:N] ~ normal(//season_n[j,2:N] +
                           mu_alpha //alpha[j,2:N] 
                           + beta*u[j,1:(N-1)] 
-#                        - sigma[j,1:(N-1)] .* Real[j,1:(N-1)]
+//                        - sigma[j,1:(N-1)] .* Real[j,1:(N-1)]
                         , sd_y); 
 ===============================================================================
 */
@@ -261,7 +261,7 @@ theta ~ normal(0.5, 0.5);//~ normal(0, 1);   exponential(2);//
   ab_err ~ normal(0, 0.05);//0.1);//25);//0.5);//1); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 
 
-#s ~ normal(0.5, 0.2);//0, 0.2);
+//s ~ normal(0.5, 0.2);//0, 0.2);
 //===============================================================================
 //  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
   p_mu ~ normal(0.5, 0.2);//0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
@@ -332,7 +332,7 @@ gw_mu ~ normal(0, 0.63);//note: half-normal(0.63) has mean around 0.5;//normal(0
     u[j,2:N] ~ normal(//season_n[j,2:N] +
                           mu_alpha //alpha[j,2:N] 
                           + beta*u[j,1:(N-1)] 
-#                        - sigma[j,1:(N-1)] .* Real[j,1:(N-1)]
+//                        - sigma[j,1:(N-1)] .* Real[j,1:(N-1)]
                         , sd_y); 
 //===============================================================================
 */
