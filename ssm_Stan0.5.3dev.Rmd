@@ -57,7 +57,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 90#60#42#40#45#20 #200     # number of firms
+J = 40#90#60#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -294,17 +294,19 @@ rho = rho,
 ```{r}
 
 #pdf("Rplots_FREEp1,1.5K,120,0.95,4ch.pdf")
-n_iter = 150#2000#3000
+n_iter = 2#1300#950#2000#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 800 #1000
+n_warmup = 1#800 #1000
 #n_warmup = n_iter/2 
-n_chains = 4
+n_chains = 1#4
 
 
 
 initf2 <- function(chain_id = 1) {
   list(mu_alpha = mu_alpha, beta = beta, theta = theta, ab_mu = ab_mu, #shape = shape,
-       s = s, p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
+       s = s, p = p, g = g, w = w, d = d, 
+       s = s, p = p, g = g, w = w, d = d, 
+       mu_season = mu_season, sd_season = sd_season,
        mu_u1 = mu_u1, #u = array(y_LT, dim = c(J,N)),
        rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base) #, sd_gamma = sd_gamma, sd_omega = sd_omega)
   }
@@ -324,11 +326,11 @@ file = "SSM0.5.3dev.stan",  # Stan program
   control = list(adapt_delta = 0.99, #0.8,#9,#8 
                  metric = "diag_e",#"dense_e",
 #                 stepsize = 0.05, #0.05, #0.01
-                 max_treedepth = 10),#15),    # adjust when there're divergent transitions after warmup
+                 max_treedepth = 15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
   chains = n_chains,#1,#8,             # default is 4 Markov chains
 #  cores = 8,
-#  seed = 555, 
+  seed = 51234, 
   iter = n_iter,#4000,#7000,#12000, #500 #2000,            # total number of iterations per chain
   warmup = n_warmup,#500,          # number of warmup iterations per chain
   refresh = n_refresh#500          # = 0 means no progress shown
@@ -351,7 +353,7 @@ file = "SSM0.5.3dev.stan",  # Stan program
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68) ; p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
@@ -365,7 +367,10 @@ print(fit2, c(
               "g", 
               "w", 
               "d", 
-              "gw_mu", "gw_sd", "gw_L", "gw_err", 
+              "g_mu", "g_sd", "g_L", "g_err", 
+              "w_mu", "w_sd", "w_L", "w_err", 
+#              "pw_mu", "pw_sd", "pw_L", "pw_err", 
+#              "gw_mu", "gw_sd", "gw_L", "gw_err", 
               "p_mu", "p_sd", "p_L", "p_err", 
               "ab_mu", "ab_sd", "ab_L", "ab_err"
               ), 
@@ -394,7 +399,7 @@ get_num_leapfrog_per_iteration(fit2)
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
@@ -426,10 +431,10 @@ mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "mu_season[2]", "mu_sea
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "theta", "mu_season[1]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "mu_season[2]", "mu_season[3]"))
 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "theta", "mu_season[1]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "mu_season[2]", "mu_season[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "theta", "mu_season[1]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_mu[3]", "theta", "mu_season[1]"))
+mcmc_pairs(posterior, np = np, pars = c("w_mu[1]", "w_mu[2]", "w_mu[3]", "mu_season[2]", "mu_season[3]"))
 
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "theta", "mu_season[1]"))
 mcmc_pairs(posterior, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "mu_season[2]", "mu_season[3]"))
@@ -437,9 +442,9 @@ mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "theta", "mu_sea
 mcmc_pairs(posterior, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_season[2]", "mu_season[3]"))
 
 mcmc_pairs(posterior, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]")) 
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
-mcmc_pairs(posterior, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "w_mu[1]", "w_mu[2]", "w_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(posterior, np = np, pars = c("g_mu[1]", "g_mu[2]", "d[1]", "d[2]", "d[3]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
 mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
 
