@@ -20,7 +20,7 @@ transformed data {
   real p3 = (-10)*0.7; //<--------------------------------
 //!!!
   int<lower=0> I_cor = I;//2; // number of correlated coefficents in p for covariate matrix Z
-  int<lower=0> K_cor = K; // number of correlated coefficents in p for covariate matrix Z
+  int<lower=0> K_cor = K; // number of correlated coefficents in g for covariate matrix X
   int<lower=0> H_cor = H; // number of correlated coefficents in w for covariate matrix G
 }
 parameters {
@@ -42,20 +42,25 @@ real<lower=0> theta; //reduction in alpha[j,n] from the initial level (mu_alpha)
 
 //vector[S] s; // coefficients of the S covariates in matrix T
 //===============================================================================
-//  vector[I] p; // coefficients of the K covariates in matrix Z
+  vector[I] p; // coefficients of the K covariates in matrix Z
 //            vector[I - I_cor] p0; //,upper=1 vector of means for correlated coeffs in w
-    vector[I_cor] p_mu; // vector of means for correlated coeffs in w
-    vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
-    cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-    vector[I_cor] p_err; // primitive vector of correlated coeffs in w
+//    vector<lower=0>[I_cor] p_mu; // vector of means for correlated coeffs in w
+//    vector<lower=0>[I_cor] p_sd; // vector of sd for correlated coeffs in w
+//    cholesky_factor_corr[I_cor] p_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+//    vector[I_cor] p_err; // primitive vector of correlated coeffs in w
+//===============================================================================
+//    vector<lower=0>[I+H] pw_mu; //<lower=0> vector of means for correlated coeffs in w
+//    vector<lower=0>[I+H] pw_sd; // vector of sd for correlated coeffs in w
+//    cholesky_factor_corr[I+H] pw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+//    vector[I+H] pw_err; // primitive vector of correlated coeffs in w
 //===============================================================================
 //  vector[K] g; // coefficients of the K covariates in matrix X
             //vector[K - K_cor] g0; // vector of means for correlated coeffs in w
 //!!! Trying to require >= 0 to get ride of an unreasonable second mode             
-vector<lower=0>[K+H] gw_mu; //<lower=0> vector of means for correlated coeffs in w
-    vector<lower=0>[K+H] gw_sd; // vector of sd for correlated coeffs in w
-    cholesky_factor_corr[K+H] gw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-    vector[K+H] gw_err; // primitive vector of correlated coeffs in w
+//    vector<lower=0>[K+H] gw_mu; //<lower=0> vector of means for correlated coeffs in w
+//    vector<lower=0>[K+H] gw_sd; // vector of sd for correlated coeffs in w
+//    cholesky_factor_corr[K+H] gw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+//    vector[K+H] gw_err; // primitive vector of correlated coeffs in w
 /*
 real g1;
 real g2;
@@ -65,21 +70,21 @@ cholesky_factor_corr[2] gw_L; // Cholesky factor of correlation matrix for corre
 vector[2] gw_err; // primitive vector of correlated coeffs in w
 real w2;
 real w3;
+*/
 //===============================================================================
 //  vector[K] g; // coefficients of the K covariates in matrix X
             //vector[K - K_cor] g0; // vector of means for correlated coeffs in w
-//            vector[K_cor] g_mu; // vector of means for correlated coeffs in w
+          vector<lower=0>[K_cor] g_mu; // vector of means for correlated coeffs in w
             vector<lower=0>[K_cor] g_sd; // vector of sd for correlated coeffs in w
             cholesky_factor_corr[K_cor] g_L; // Cholesky factor of correlation matrix for correlated coeffs in w
             vector[K_cor] g_err; // primitive vector of correlated coeffs in w
 //===============================================================================
 //  vector[H] w; // coefficients of the H covariates in matrix G
             //vector[H - H_cor] w0; // vector of means for correlated coeffs in w
-//            vector[H_cor] w_mu; // vector of means for correlated coeffs in w
+            vector<lower=0>[H_cor] w_mu; // vector of means for correlated coeffs in w
             vector<lower=0>[H_cor] w_sd; // vector of sd for correlated coeffs in w
             cholesky_factor_corr[H_cor] w_L; // Cholesky factor of correlation matrix for correlated coeffs in w
             vector[H_cor] w_err; // primitive vector of correlated coeffs in w
-*/
 //===============================================================================
   simplex[L] d; // fractional reversal of prior-period manipluation by accruals
 //
@@ -107,7 +112,8 @@ vector[2] gw_raw; // coefficients of the H covariates in matrix G
 vector[K_cor] g_mu; // vector of means for correlated coeffs in w
 vector[H_cor] w_mu; // vector of means for correlated coeffs in w
 */
-  vector[K+H] gw; // modeling g and w together to capture their correlations
+//  vector[K+H] gw; // modeling g and w together to capture their correlations
+//  vector[I+H] pw; // modeling g and w together to capture their correlations
 //===============================================================================
 //  vector[K_cor] g_raw; // coefficients of the H covariates in matrix G
   vector[K] g; // coefficients of the K covariates in matrix X
@@ -115,7 +121,7 @@ vector[H_cor] w_mu; // vector of means for correlated coeffs in w
   vector[H] w; // coefficients of the H covariates in matrix G
 //===============================================================================
 //  vector[I_cor] p_raw; // coefficients of the H covariates in matrix G
-  vector[I] p; // coefficients of the H covariates in matrix G
+//  vector[I] p; // coefficients of the H covariates in matrix G
 //===============================================================================
   real mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real beta; // slope coefficient of the AR(1) process of y[n]
@@ -127,11 +133,22 @@ vector[H_cor] w_mu; // vector of means for correlated coeffs in w
     mu_alpha = ab[1];//inv_logit(ab[1]);
     beta = ab[2];
 //===============================================================================
-  p = p_mu + p_sd .* (p_L * p_err);
+//  pgw = pgw_mu + pgw_sd .* (pgw_L * pgw_err);
+//    p = pgw[1:I];
+//    g = pgw[I+1:I+K];
+//    w = pgw[I+K+1:I+K+H];
 //===============================================================================
-  gw = gw_mu + gw_sd .* (gw_L * gw_err);
-    g = gw[1:K];
-    w = gw[K+1:K+H];
+//  pw = pw_mu + pw_sd .* (pw_L * pw_err);
+//    p = pw[1:I];
+//    w = pw[I+1:I+H];
+//===============================================================================
+//  p = p_mu + p_sd .* (p_L * p_err);
+  g = g_mu + g_sd .* (g_L * g_err);
+  w = w_mu + w_sd .* (w_L * w_err);
+//===============================================================================
+//  gw = gw_mu + gw_sd .* (gw_L * gw_err);
+//    g = gw[1:K];
+//    w = gw[K+1:K+H];
 //===============================================================================
 
 
@@ -253,8 +270,9 @@ theta ~ normal(0.5, 0.5);//~ normal(0, 1);   exponential(2);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu[1] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
-  ab_mu[2] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+  ab_mu ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+//  ab_mu[1] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+//  ab_mu[2] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
   
   ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
   ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);
@@ -262,34 +280,50 @@ theta ~ normal(0.5, 0.5);//~ normal(0, 1);   exponential(2);//
 
 
 //s ~ normal(0.5, 0.2);//0, 0.2);
+p ~ normal(0, 0.63);//student_t(4, 0, 1);//5);
 //===============================================================================
-//  p ~ normal(0, 1);//student_t(4, 0, 1);//5);
-  p_mu ~ normal(0.5, 0.2);//0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
-  p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
-  p_L ~ lkj_corr_cholesky(2);
-  p_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//  p_mu ~ normal(0, 0.63);;//note: half-normal(0.63) has mean around 0.5;
+//  p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
+//  p_L ~ lkj_corr_cholesky(2);
+//  p_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//===============================================================================
+  g_mu ~ normal(0, 0.63);;//note: half-normal(0.63) has mean around 0.5;
+  g_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
+  g_L ~ lkj_corr_cholesky(2);
+  g_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//===============================================================================
+  w_mu ~ normal(0, 0.63);;//note: half-normal(0.63) has mean around 0.5;
+  w_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
+  w_L ~ lkj_corr_cholesky(2);
+  w_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//===============================================================================
+//      p ~ normal(0, 1);//student_t(4, 0, 1);//5);
+//  p_mu ~ normal(0.5, 0.2);//0.15);//0.2);//0.5);//1);//student_t(3,0,1);//4, 0, 1);// 
+//  p_sd ~ normal(0, 0.1);//0.2);//0.25);//2);
+//  p_L ~ lkj_corr_cholesky(2);
+//  p_err ~ normal(0, 0.05);//0.2);//0.25); // implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //
 //    p0 ~ normal(0, 0.5);//1);//normal(0.5, 0.5);
 
 
 //!!!
 //===============================================================================
-gw_mu ~ normal(0, 0.63);//note: half-normal(0.63) has mean around 0.5;//normal(0.5, 0.2);//exponential(2); //
-  //gw_mu[1] ~ normal(0.5, 0.2);
-  //gw_mu[4] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
-//assumed gw[1]=g[1] is unlikely to be negative when 
-//  X1 = 0.5, ie, the CEO's attitude is neutral in reporting (neither aggr. or conservative)
-//  X2 = 0, ie, no downgrade-driven temptation to do aggressive reporting  
-//assumed gw[4]=w[1] is unlikely to be negative (note: = -Gw), ie, the max amount manipulatable 
-//  by accrual-based EM is unlikely to exceed 50% point even when there's no gatekeeping at all, ie,
-//  Z1 = 0, ie, % of NED = 0
-//  Z2 = 0, ie, audited by non-Big4
-  //gw_mu[2:3] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
-  //gw_mu[5:6] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
+//gw_mu ~ normal(0, 0.63);//note: half-normal(0.63) has mean around 0.5;//normal(0.5, 0.2);//exponential(2); //
+      //gw_mu[1] ~ normal(0.5, 0.2);
+      //gw_mu[4] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
+  //assumed gw[1]=g[1] is unlikely to be negative when 
+  //  X1 = 0.5, ie, the CEO's attitude is neutral in reporting (neither aggr. or conservative)
+  //  X2 = 0, ie, no downgrade-driven temptation to do aggressive reporting  
+  //assumed gw[4]=w[1] is unlikely to be negative (note: = -Gw), ie, the max amount manipulatable 
+  //  by accrual-based EM is unlikely to exceed 50% point even when there's no gatekeeping at all, ie,
+  //  Z1 = 0, ie, % of NED = 0
+  //  Z2 = 0, ie, audited by non-Big4
+      //gw_mu[2:3] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
+      //gw_mu[5:6] ~ normal(0.5, 0.2);//0.15);//0.2);//1);
   
-  gw_sd ~ normal(0, 0.1);//0.05);//0.2);
-  gw_L ~ lkj_corr_cholesky(2);
-  gw_err ~ normal(0, 0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
+//gw_sd ~ normal(0, 0.1);//0.05);//0.2);
+//gw_L ~ lkj_corr_cholesky(2);
+//gw_err ~ normal(0, 0.05); //0.1); implies:  w_raw ~ multi_normal(w_mu, quad_form_diag(w_L * w_L', w_sd));
 //===============================================================================
 /*
 //  g ~ normal(0, 1);//student_t(4, 0, 1);//student_t(3, 0, 5);//normal(0, 1);//10);//0); //0.2); // g_init
