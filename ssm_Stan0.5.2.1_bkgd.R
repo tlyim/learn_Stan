@@ -8,7 +8,7 @@
 ## ------------------------------------------------------------------------
 
 #knitr::purl("ssm_Stan0.5.3dev.Rmd", output = "ssm_Stan0.5.3dev.R", documentation = 2)
-setwd(D:\github\learn_Stan)
+setwd("D:/github/learn_Stan")
 
 .libPaths()
 .libPaths( c( "~/R_library/3.5", .libPaths() ) )
