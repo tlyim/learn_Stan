@@ -8,6 +8,8 @@
 ## ------------------------------------------------------------------------
 
 #knitr::purl("ssm_Stan0.5.3dev.Rmd", output = "ssm_Stan0.5.3dev.R", documentation = 2)
+setwd("D:/github/learn_Stan")
+
 .libPaths()
 .libPaths( c( "~/R_library/3.5", .libPaths() ) )
 #.libPaths( c( .libPaths(), "~/R_library/3.5" ) )
@@ -55,7 +57,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 90#60#42#40#45#20 #200     # number of firms
+J = 30#60#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -292,11 +294,11 @@ G.l <- data.frame(
 ## ------------------------------------------------------------------------
 
 #pdf("Rplots_FREEp1,1.5K,120,0.95,4ch.pdf")
-n_iter = 1300#950#2000#3000
+n_iter = 1450#950#2000#3000
 n_refresh = max(2, n_iter/10)
 n_warmup = 800 #1000
 #n_warmup = n_iter/2 
-n_chains = 4
+n_chains = 3#4
 
 
 
@@ -322,7 +324,7 @@ file = "SSM0.5.2.stan",  # Stan program
   control = list(adapt_delta = 0.99, #0.8,#9,#8 
                  metric = "diag_e",#"dense_e",
 #                 stepsize = 0.05, #0.05, #0.01
-                 max_treedepth = 13),    # adjust when there're divergent transitions after warmup
+                 max_treedepth = 15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
   chains = n_chains,#1,#8,             # default is 4 Markov chains
 #  cores = 8,

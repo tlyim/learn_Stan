@@ -10,6 +10,8 @@ fig_height: 6
 #knitr::purl("ssm_Stan0.5.3dev.Rmd", output = "ssm_Stan0.5.3dev.R", documentation = 2)
 
 #options(repos = c(CRAN = "https://cran.revolutionanalytics.com"))
+#install.packages("rstan", repos = "https://cloud.r-project.org/", dependencies = TRUE)
+#remotes::install_github("stan-dev/rstan", ref = "develop", subdir = "rstan/rstan", build_opts = "")
 .libPaths()
 .libPaths( c( "~/R_library/3.5", .libPaths() ) )
 #.libPaths( c( .libPaths(), "~/R_library/3.5" ) )
