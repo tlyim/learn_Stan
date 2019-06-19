@@ -8,6 +8,10 @@ fig_height: 6
 ```{r}
 
 #knitr::purl("ssm_Stan0.5.2.Rmd", output = "ssm_Stan0.5.2.R", documentation = 2)
+
+#options(repos = c(CRAN = "https://cran.revolutionanalytics.com"))
+#install.packages("rstan", repos = "https://cloud.r-project.org/", dependencies = TRUE)
+#remotes::install_github("stan-dev/rstan", ref = "develop", subdir = "rstan/rstan", build_opts = "")
 .libPaths()
 .libPaths( c( "~/R_library/3.5", .libPaths() ) )
 #.libPaths( c( .libPaths(), "~/R_library/3.5" ) )
@@ -57,7 +61,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 90#60#42#40#45#20 #200     # number of firms
+J = 10#90#60#42#40#45#20 #200     # number of firms
 N = 4*25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -294,11 +298,11 @@ rho = rho,
 ```{r}
 
 #pdf("Rplots_FREEp1,1.5K,120,0.95,4ch.pdf")
-n_iter = 2000#2000#3000
+n_iter = 1450#2000#2000#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 1000
+n_warmup = 800#1000
 #n_warmup = n_iter/2 
-n_chains = 4
+n_chains = 3#4
 
 
 
@@ -322,13 +326,17 @@ file = "SSM0.5.2.stan",  # Stan program
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
   control = list(adapt_delta = 0.8,#9,#8, #9
-                 metric = "diag_e",#"dense_e",
+#                 adapt_engaged = 1,
+                 adapt_init_buffer = 75,
+                 adapt_term_buffer = 50,
+                 adapt_window = 25,
 #                 stepsize = 0.05, #0.05, #0.01
-                 max_treedepth = 15),#15),    # adjust when there're divergent transitions after warmup
+#                 metric = "diag_e",#"dense_e",
+                 max_treedepth = 14),#15),    # adjust when there're divergent transitions after warmup
   init = init_ll, 
   chains = n_chains,#1,#8,             # default is 4 Markov chains
 #  cores = 8,
-#  seed = 555, 
+  seed = 51234, 
   iter = n_iter,#4000,#7000,#12000, #500 #2000,            # total number of iterations per chain
   warmup = n_warmup,#500,          # number of warmup iterations per chain
   refresh = n_refresh#500          # = 0 means no progress shown
@@ -351,7 +359,7 @@ file = "SSM0.5.2.stan",  # Stan program
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68) ; p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
@@ -369,32 +377,18 @@ print(fit2, c(
               "p_mu", "p_sd", "p_L", "p_err", 
               "ab_mu", "ab_sd", "ab_L", "ab_err"
               ), 
-      probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
+      probs = c(0.05, 0.5, 0.95), digits = 3) #, probs = c(.05,.95))
 
-get_num_leapfrog_per_iteration(fit2)
-
-# fit <- read_stan_csv("samples.csv")
-# print(fit, c(
-#               "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
-#               "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
-# #              "s",
-#               "p",
-#               "g", 
-#               "w", 
-#               "d", 
-#               "gw_mu", "gw_sd", "gw_L", "gw_err", 
-#               "p_mu", "p_sd", "p_L", "p_err", 
-#               "ab_mu", "ab_sd", "ab_L", "ab_err"
-#               ), 
-#       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-# get_num_leapfrog_per_iteration(fit)
+cat("\nn_leapfrog:\n")
+get_num_leapfrog_per_iteration(fit2) %>% summary()
+cat("\n")
 
 #====================================================
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
@@ -448,7 +442,7 @@ mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", 
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
@@ -462,7 +456,7 @@ mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", 
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 

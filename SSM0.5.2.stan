@@ -88,12 +88,13 @@ real w3;
 //  real err_log_base[J];
 }
 transformed parameters {
-vector[Q] season_q[J];
-vector[N] season_n[J];
   vector[N] err_y[J];
+//vector[Q] season_q[J];
+//vector[N] season_n[J];
 //!!!    vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
-  vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
-  vector[N] m[J]; // misreporting extent in the reported figures 
+//  vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
+//  vector[N] m[J]; // misreporting extent in the reported figures 
+
 
 //vector[N] sigma[J]; // fraction of real EM that is shifting from next period's sales
   // sigma = 0 means  the real EM is either 
@@ -107,7 +108,6 @@ vector[2] gw_raw; // coefficients of the H covariates in matrix G
 vector[K_cor] g_mu; // vector of means for correlated coeffs in w
 vector[H_cor] w_mu; // vector of means for correlated coeffs in w
 */
-  vector[K+H] gw; // modeling g and w together to capture their correlations
 //===============================================================================
 //  vector[K_cor] g_raw; // coefficients of the H covariates in matrix G
   vector[K] g; // coefficients of the K covariates in matrix X
@@ -119,26 +119,35 @@ vector[H_cor] w_mu; // vector of means for correlated coeffs in w
 //===============================================================================
   real mu_alpha; // intercept coefficient (drift) of the AR(1) process of the unbiased figure y[n]
   real beta; // slope coefficient of the AR(1) process of y[n]
-  vector[2] ab; // primitive vector of correlated coeffs in w
 
 
 //===============================================================================
+{
+  vector[2] ab; // primitive vector of correlated coeffs in w
   ab = ab_mu + ab_sd .* (ab_L * ab_err);
     mu_alpha = ab[1];//inv_logit(ab[1]);
     beta = ab[2];
+}    
 //===============================================================================
   p = p_mu + p_sd .* (p_L * p_err);
 //===============================================================================
+{
+  vector[K+H] gw; // modeling g and w together to capture their correlations
   gw = gw_mu + gw_sd .* (gw_L * gw_err);
     g = gw[1:K];
     w = gw[K+1:K+H];
+}    
 //===============================================================================
 
 
   for (j in 1:J) {
+vector[Q] season_q[J];
+vector[N] season_n[J];
+vector[N] Real[J]; // LT impact of real EM on alpha[j,n]
+vector[N] m[J]; // misreporting extent in the reported figures 
 
     vector[N] alpha[J];
-real base[J];  // ,upper=1
+//real base[J];  // ,upper=1
 vector[N] zeta[J]; // temptation to manage current-period real earnings upward
     vector[N] tau[J]; // temptation to misreport
     vector[N] chi[J]; // 
@@ -156,11 +165,12 @@ vector[N] zeta[J]; // temptation to manage current-period real earnings upward
     tau[j] = X[j]*g;// temptation to misreport
     chi[j] = -G[j]*w;// 
 
-    base[j] = 1;// exp( sd_base*err_log_base[j] ); //mu_base + 
+//    base[j] = 1;// exp( sd_base*err_log_base[j] ); //mu_base + 
     b[j] = 2*inv_logit(rho*tau[j]) - 1;
 //    R[j] = ( log1p_exp(rho*chi[j]) - log1p_exp(rho*(chi[j]-1)) )/rho;
     R[j] = inv_logit( rho*chi[j] );//+ rep_vector(sd_base*err_log_base[j], N) );
-    m[j] = base[j] * b[j] .* R[j];  // extent of misreporting resulting from bias effort 
+    m[j] = //base[j] * 
+            b[j] .* R[j];  // extent of misreporting resulting from bias effort 
 //===============================================================================
 //    D[j,1] = m[j,1];
 //    D[j,2] = m[j,2] - d[1]*m[j,1];     
@@ -253,8 +263,9 @@ theta ~ normal(0.5, 0.5);//~ normal(0, 1);   exponential(2);//
 //===============================================================================
 //  mu_alpha ~ normal(0.5, 0.5);//normal(0, 1);//student_t(3, 0, 1);//exponential(2);//normal(0.5, 0.5);//
 //  beta ~ normal(0.5, 0.5);
-  ab_mu[1] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
-  ab_mu[2] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+  ab_mu ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+//  ab_mu[1] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
+//  ab_mu[2] ~ normal(0.5, 0.5);//0.5);//0.25);//0.2);//normal(0, 1);//
   
   ab_sd ~ normal(0, 0.1);//25);//0.5);//1);//exponential(1);//
   ab_L ~ lkj_corr_cholesky(2);//lkj_corr_cholesky(2);
