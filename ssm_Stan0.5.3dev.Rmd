@@ -309,7 +309,6 @@ n_chains = 1#3#4
 initf2 <- function(chain_id = 1) {
   list(mu_alpha = mu_alpha, beta = beta, theta = theta, ab_mu = ab_mu, #shape = shape,
        s = s, p = p, g = g, w = w, d = d, 
-       s = s, p = p, g = g, w = w, d = d, 
        mu_season = mu_season, sd_season = sd_season,
        mu_u1 = mu_u1, #u = array(y_LT, dim = c(J,N)),
        rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base) #, sd_gamma = sd_gamma, sd_omega = sd_omega)
@@ -378,25 +377,11 @@ print(fit2, c(
               "p_mu", "p_sd", "p_L", "p_err", 
               "ab_mu", "ab_sd", "ab_L", "ab_err"
               ), 
-      probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
+      probs = c(0.05, 0.5, 0.95), digits = 3) #, probs = c(.05,.95))
 
-get_num_leapfrog_per_iteration(fit2)
-
-# fit <- read_stan_csv("samples.csv")
-# print(fit, c(
-#               "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
-#               "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
-# #              "s",
-#               "p",
-#               "g", 
-#               "w", 
-#               "d", 
-#               "gw_mu", "gw_sd", "gw_L", "gw_err", 
-#               "p_mu", "p_sd", "p_L", "p_err", 
-#               "ab_mu", "ab_sd", "ab_L", "ab_err"
-#               ), 
-#       probs = c(0.1, 0.5, 0.9), digits = 3) #, probs = c(.05,.95))
-# get_num_leapfrog_per_iteration(fit)
+cat("\nn_leapfrog:\n")
+get_num_leapfrog_per_iteration(fit2) %>% summary()
+cat("\n")
 
 #====================================================
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
@@ -471,7 +456,7 @@ mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", 
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
@@ -513,7 +498,7 @@ mcmc_pairs(posterior, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "s[3]"))
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
 # s = c(0.4, 0.15, 0.15)  
-  # p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.7, 0.72, 0.42) [soft-clipping]; p = c(0.72, 0.42) #p[3]=0.7
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
 # d = c(0.05, 0.7, 0.25) 
