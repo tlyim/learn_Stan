@@ -1,0 +1,282 @@
+---
+title: "Traceplot for CmdStan output"
+output: 
+  html_notebook:
+    fig_height: 7
+    fig_width: 7
+---
+
+
+
+```{r}
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(rstan)
+library(bayesplot)
+
+# stan.tb <- read_csv("df_samples1.csv")
+# myStan.tb <- stan.tb %>% 
+#   select(-contains("err_y."), -contains("m."), -contains("Real."),
+#          -contains("season_raw."), -contains("season_n."), -contains("season_q.")) %>% 
+#   select(mu_alpha, beta, mu_u1, theta, sd_y, 
+#          starts_with("p."), starts_with("g."), starts_with("w."), starts_with("d."),
+#          sd_season, starts_with("mu_season."),
+#          divergent__, treedepth__, energy__, 
+#          everything())
+# colnames(myStan.tb)
+
+metric = ""#"diag_"#"dense_"
+csvfiles <- dir("D:/github/learn_Stan",#system.file('misc', package = 'rstan'), 
+#                pattern = '^samples[1-4].csv', full.names = TRUE)
+                pattern = paste0("^", metric, "samples[1-8].csv"), full.names = TRUE)
+fit <- read_stan_csv(csvfiles)
+
+# Prepare objects for bayesplot::
+fit.ar <- as.array(fit)
+lp <- log_posterior(fit)
+np <- nuts_params(fit)  # nuts parameters
+
+```
+
+# Summary of the posterior sample 
+```{r} 
+#====================================================
+  # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
+  # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.62, 0.68) ; p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
+  # w = c(0.72, 0.15, 0.62)  
+# d = c(0.05, 0.7, 0.25) 
+#====================================================
+
+print(fit, c(
+              "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
+              "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
+#              "s",
+              "p",
+              "g", 
+              "w", 
+              "d", 
+              "gw_mu", "gw_sd", "gw_L", "gw_err", 
+              "p_mu", "p_sd", "p_L", "p_err", 
+              "ab_mu", "ab_sd", "ab_L", "ab_err"
+              ), 
+      probs = c(0.05, 0.5, 0.95), digits = 3) #, probs = c(.05,.95))
+
+cat("\nn_leapfrog:\n")
+get_num_leapfrog_per_iteration(fit) %>% summary()
+cat("\n")
+
+#====================================================
+  # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
+  # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
+  # w = c(0.72, 0.15, 0.62)  
+# d = c(0.05, 0.7, 0.25) 
+#====================================================
+
+```
+
+
+# Pairs plots
+```{r} 
+
+#par(mar = c(4, 4, 0.5, 0.5))
+knitr::opts_chunk$set(fig.width=6, fig.height=6)
+color_scheme_set("gray") #"darkgray")
+#Error: cannot allocate vector of size 782.8 Mb
+#mcmc_parcoord(posterior, np = np)
+
+#http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
+#The main problem is that large steps are required to explore the less narrow regions efficiently, but those steps become too large for navigating the narrow region. The required step size is connected to the value of tau. When tau is large it allows for large variation in theta (and requires large steps) while small tau requires small steps in theta.
+#The non-centered parameterization avoids this by sampling the eta parameter which, unlike theta, is a priori independent of tau. Then theta is computed deterministically from the parameters eta, mu and tau afterwards. Here’s the same plot as above, but with eta[1] from non-centered parameterization instead of theta[1] from the centered parameterization: 
+
+
+mcmc_pairs(fit.ar, np = np, pars = c("theta", "mu_season[1]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("d[1]", "d[2]", "d[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]")) 
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
+
+#====================================================
+  # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
+  # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
+  # w = c(0.72, 0.15, 0.62)  
+# d = c(0.05, 0.7, 0.25) 
+
+```
+
+
+
+# More pairs plot
+```{r, eval=F}
+
+mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_err[1]", "ab_err[2]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("p_err[1]", "p_err[2]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_err[1]", "p_err[2]", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_err[1]", "p_err[2]", "ab_err[1]", "ab_err[2]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "p_mu[1]", "p_mu[2]", "p0[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "p_sd[1]", "p_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "p_err[1]", "p_err[2]"))
+ 
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_sd[1]", "ab_sd[2]", "ab_err[1]", "ab_err[2]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_alpha", "beta", "mu_u1", "sd_y")) 
+
+```
+
+
+```{r, eval=F}
+check_hmc_diagnostics(fit)
+    # check_treedepth(fit)
+    # check_divergences(fit)
+    # check_energy(fit)
+
+get_max_treedepth_iterations(fit)
+get_divergent_iterations(fit)
+    # get_num_max_treedepth(fit)
+    # get_num_divergent(fit)
+    # #get_num_leapfrog_per_iteration(fit)
+    # get_bfmi(fit)
+    # get_low_bfmi_chains(fit)
+```
+
+
+# Scatter plot
+```{r}
+color_scheme_set("darkgray")
+# mcmc_parcoord(fit.ar, np = np)
+#
+# mcmc_scatter(
+#   fit.ar,
+#   pars = c("p[1]", "sd_y"),
+# #  transform = list(beta = "log"),
+#   np = np,
+#   size = 1
+# )
+```
+
+
+```{r, fig.width=10, fig.height=3.5}
+#```{r}
+
+# help("color_scheme_set") 
+color_scheme_set("viridis")    
+mcmc_trace(fit.ar, pars = "p[1]", np = np, 
+           n_warmup = 400, window = c(1,600)
+           ) #+ xlab("Post-warmup iteration")
+
+color_scheme_set("brightblue") # see help("color_scheme_set")
+energy <- nuts_params(fit) %>% 
+   mcmc_nuts_energy(np)
+
+energy
+# 
+# mcmc_nuts_divergence(np, lp)
+ 
+```
+
+
+```{r, fig.width=10, fig.height=14}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit, pars = c("p[1]", "p[3]",
+                        "mu_alpha", "beta"
+                        ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.5, 1.5)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top")
+
+```
+
+
+```{r, fig.width=10, fig.height=3.5}
+#```{r}
+
+color_scheme_set("brightblue") # see help("color_scheme_set")
+
+rhat(fit) %>% 
+  mcmc_rhat()
+
+neff_ratio(fit) %>% 
+  mcmc_neff(size = 2)
+
+```
+
+
+```{r, eval=F}
+#library(shinystan)
+#??? ss_complete_pool <- extract(fit);
+
+library(shinystan)
+ss_output <- launch_shinystan(as.shinystan(fit, 
+                              pars=c(
+#              "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
+              "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
+#              "s",
+              "p",
+              "g", 
+              "w", 
+              "d", 
+              "p_mu", "p_sd", "p_L", "p_err", 
+              "gw_mu", "gw_sd", "gw_L", "gw_err", 
+              "ab_mu", "ab_sd", "ab_L", "ab_err"
+              )))
+
+```
+
+
+
+```{r}
+sessionInfo()
+```
+
+
