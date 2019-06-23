@@ -88,7 +88,6 @@ real w3;
 //  real err_log_base[J];
 }
 transformed parameters {
-  vector[N] err_y[J];
 //vector[Q] season_q[J];
 //vector[N] season_n[J];
 //!!!    vector[N] u[J]; // unmanaged earnings (if shock removed, the remaining is the kernel earnings)
@@ -139,6 +138,11 @@ vector[H_cor] w_mu; // vector of means for correlated coeffs in w
 }    
 //===============================================================================
 
+
+}
+model {
+
+vector[N] err_y[J];
 
   for (j in 1:J) {
 vector[Q] season_q[J];
@@ -249,8 +253,7 @@ phi[j] = //rep_vector(p3, N) +
                   - ( D[j,2:N] - beta*D[j,1:(N-1)] );
 
     }
-}
-model {
+
 
   // priors 
 
