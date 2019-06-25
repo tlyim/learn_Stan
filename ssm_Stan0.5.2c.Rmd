@@ -1,0 +1,755 @@
+---
+title: "State space model of accounting manipulation - Stan"
+output: html_notebook
+fig_width: 6 
+fig_height: 6 
+---
+
+```{r}
+
+#knitr::purl("ssm_Stan0.5.2c.Rmd", output = "ssm_Stan0.5.2c.R", documentation = 2)
+
+#options(repos = c(CRAN = "https://cran.revolutionanalytics.com"))
+#install.packages("rstan", repos = "https://cloud.r-project.org/", dependencies = TRUE)
+#remotes::install_github("stan-dev/rstan", ref = "develop", subdir = "rstan/rstan", build_opts = "")
+.libPaths()
+.libPaths( c( "~/R_library/3.5", .libPaths() ) )
+#.libPaths( c( .libPaths(), "~/R_library/3.5" ) )
+.libPaths()
+
+#library(tidyverse)
+library(dplyr)
+library(magrittr)
+
+#load previously saved Stan model objects
+#load(file = "StanObjects.rda")
+
+#library(shinystan)
+library(bayesplot)
+library(rstan)
+rstan_options(auto_write = TRUE) # avoid recompilation of unchanged Stan programs
+
+# The following can affect distributional computing over a cluster
+options(mc.cores = parallel::detectCores())  # 
+
+# The following throws an error in compiling .stan
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native') # For improved execution time but can throw errors for some CPUs
+
+```
+
+
+# Estimate the simulated model with Stan - misreporting extent 
+  (forecasts specified in generated quantities block)
+//ignore these lines: 
+//  COGS2Rev, SGA2Rev, RnD2Rev with Rev2Rev = unit vector as the intercept)
+//   int<lower=0,upper=1> M[N];   // M = 1 for the decision to misreport; = 0 if report honestly  
+
+```{stan output.var=SSM, eval=F}
+```
+
+# Simulate data
+```{stan output.var=simu_SSM, eval=F}
+```
+
+
+
+# Simulate data and fit the debug model (also, save Stan model objects) 
+```{r}
+# J=80,N=4*30: Apparently, no need to go beyond this (take WRDS about 2.5 hrs to finish)
+# J=45,N=4*30 gives reasonable estimates of the baseline model of AR(1) with hierarchical seasonability
+# J=60,N=4*20 also seems to be acceptable
+# Can consider J=42,N=4*18 for model dev process only  
+#   but J=45,N=4*20 gives more reasonable estimates  
+#===========================================
+J = 40#90#60#42#40#45#20 #200     # number of firms
+N = 4*15#25#30#18#15#5#15   #number of (quarterly) observations of a firm
+Q = 4 # quarterly time series
+
+rho = 1#2#5  # curvature of the soft-clipping function; rho=50 would make nearly hard-clipping
+mu_base = -1.6
+sd_base = 0.2 #0.05  
+mu_alpha = 0.04 #0.1#0.2  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+#mu_alpha = 0.04  # intercept parameter of the AR(1) processs of the underlying unbiased figure
+beta = 0.6#0.85  # slope parameter of the AR(1) processs of the underlying unbiased figure
+theta = 0.15 #0.2 #0.1 # real EM's LT impact on alpha[j,n]
+y_LT = mu_alpha/(1-beta)
+mu_u1 = y_LT # initial y for data simulation set to three times of the LT stationary level
+ab_mu = c(mu_alpha, beta)
+sd_y = 0.08  # sd of underlying unbiased figures is likely to be industry-specific / business model specific
+mu_season = c(-0.12, -0.06, 0.15)
+sd_season = 0.1
+
+  
+  #delta = 0.65 # reversal coeff. of real EM (eg, prior year's heavily discounted sales taking from this year's)
+  # delta can be bigger than, eg, sales taken from last year's heavy discount that would have been higher w/o discount; but delta can be less than 1 if the heavy discount does stimulate more sales than taken from next yaer's
+
+#pvec <- matrix(data = p, nrow = I)  # define column vector as a matrix[N,1]
+#Z.l[[3]]%*%p %>%  str()  #ok with p as will be converted accordingly
+
+
+# parameters of the DGP of the likelihood of using sales- vs. RnD-based real EM (sigma = 1 or 0)
+s = c(0.4, 0.15, 0.15) # s = c(0.4, 0.15, 0.15) 
+S = length(s)
+
+# parameters of the data generation process of the temptation to do real EM
+#p = c(0.72, 0.42)#, 0.7) # p[3] is constant and hard-coded; this p[3] sets Real|p[1:2]=0 at a reasonable level 
+p = c(0.7, 0.62, 0.68) # for inv_logit(): changed p[3] to see if it could be reliably est'd
+#p = c(0.7, 0.62, 0.35) # p[1] is constant; these parameters are for inv_logit()
+# p = c(0.7, 0.72, 0.42) # p[1] is constant; these parameters are for soft-clipping function
+# each factor contributes only 1-1.1% but both together can go up to 16% pt. of real EM
+I = length(p) # soft-clipping  rho=5
+
+# parameters of the data generation process of the temptation to misreport
+g = c(0.85, 0.35) 
+# g = c(0.2, 0.2, 0.25) 
+K = length(g)
+
+# parameters of the data generation process of the strength of governance and monitoring 
+# (eg, audit committee chair with financial expertise, big 4 auditor, etc)
+w = c(0.72, 0.15, 0.62) # w = c(0.72, 0.15, 0.62) 
+H = length(w)
+
+d = c(0.05, 0.7, 0.25) # fractional reversal of prior-period manipluation by accruals
+L = length(d)
+
+NoReportedRnD_freq = 0.85
+IsRetailer_freq = 0.55
+ratioNED_req = 0.25 #0.3  # min ratio of non-executive directors (NED) required by law
+Big4_freq = 0.7#0.6
+downgrade_freq = 0.3 #0.5
+integrity = 0.4 #0.35 #(0,1)  0.5 = average       
+# integrity level, between (0,1), of the society, interpreted as likelihood to behave opportunistically
+# integrity level of an individual, indiv_integ between (-Inf,Inf), is 
+#   affected by a society's general integrity level in a stochastic fashion varying from period to period
+
+#M <- rbinom(N, 1, integrity)   # the decision to misreport earnings
+
+# Define function to convert data.frame with gvkey as the key to a list of matices
+df2mat.l <- function(z){
+  z %>% 
+  split(.$gvkey) %>% 
+  lapply(function(z) select(z, -c(gvkey))) %>% 
+  lapply(as.matrix)
+  }
+
+#set.seed(8)
+# T.l captures firm characteristics related to whether firms are more likely to use sales- vs. RnD-based real EM
+T.l <- data.frame(
+  gvkey = rep(1:J, times=N),                   
+  constant = rep(1, J*N),
+  NoReportedRnD = (10)*( rbinom(J*N, 1, NoReportedRnD_freq) - NoReportedRnD_freq ),
+  IsRetailer = (10)*( rbinom(J*N, 1, IsRetailer_freq) - IsRetailer_freq )#,
+ ) %>%
+  df2mat.l()
+
+# make Z.l different from X.l to avoid less than full rank in estimation
+Z.l <- data.frame(
+  gvkey = rep(1:J, times=N),                   
+  constant = (-10)*rep(1, J*N),
+  distortion = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - (1-integrity) ),
+  downgrade = (10)*( rbinom(J*N, 1, downgrade_freq) - downgrade_freq )#,
+#constant = (-10)*rep(1, J*N)#,
+ ) %>%
+  df2mat.l()
+
+# covariate matrix X capturing the dis/incentive to misreport
+# downgrade = 1 if one or more analysts following the firm downgraded their stock recommendation in the last period
+X.l <- data.frame(
+  gvkey = rep(1:J, times=N),                   
+  constant = rep(1, J*N),
+  aggressive = (10)*( rbeta(J*N, 3*(1-integrity), 3*integrity) - 0.4 )#,  #(1-integrity)
+#  downgrade = (10)*rbinom(J*N, 1, downgrade_freq)#,
+  ) %>%
+  df2mat.l()
+
+get_ratioNED <- function(ratioNED_req, J, N) {
+  CC = pmax(ratioNED_req, rbinom(J, 20, ratioNED_req)/20) 
+  EE = rep(NULL, J)
+  for (n in 1:N)  { 
+    A = rbinom(J, 1, 0.5)/20
+    B = -rbinom(J, 1, 0.5)/20
+    CC = pmin(0.65, pmax(ratioNED_req, A+B+CC)) #%>%  print()
+    EE = c(EE, CC)
+    } 
+  return(EE)
+  }
+# covariate matrix G capturing the strength of internal governance and external monitoring mechansims
+G.l <- data.frame(
+  gvkey = rep(1:J, times=N), # note the difference from times=N
+  constant = (1)*rep(1, J*N),
+  ratioNED = (10)*get_ratioNED(ratioNED_req, J, N), 
+  Big4 = (2)*rbinom(J*N, 1, Big4_freq)#,
+  ) %>%
+  df2mat.l()
+# G.l %>%  arrange(gvkey) %>% head(120)
+#colnames(Z) <- c("Rev2Rev", "COGS2Rev", "SGA2Rev", "RnD2Rev")
+
+simu_SSM_data <- list(J = J, 
+                      N = N, 
+                      Q = Q,
+                      S = S,
+                      I = I,
+                      K = K,
+                      H = H,
+                      L = L,
+                      T = T.l,
+                      Z = Z.l,
+                      X = X.l,
+                      G = G.l,
+rho = rho,
+                      sd_y = sd_y,
+                      mu_season = mu_season,
+                      sd_season = sd_season,
+                      mu_u1 = mu_u1,
+                      theta = theta,
+                      mu_alpha = mu_alpha,
+                      beta = beta, 
+#sd_alpha = sd_alpha,
+#                      sd_gamma = sd_gamma,
+#                      sd_omega = sd_omega,
+                      mu_base = mu_base,
+                      sd_base = sd_base,
+                      s = s,
+                      p = p,
+                      g = g,
+                      w = w,
+                      d = d
+                      )
+# save(simu_SSM_data, file="simu_SSM_data.rda")
+# load(file="simu_SSM_data.rda")
+
+# Simulate SSM data
+simu_fit <- stan(#model_code = simu_SSM@model_code,
+                 file = "simu_SSM0.5.2c.stan",  # Stan program
+#                 file = "simu_SSM2.4.stan",  # Stan program
+                 data=simu_SSM_data, iter=1, #seed=987,  
+                 chains=1, algorithm="Fixed_param")  
+
+q <- extract(simu_fit)$q[1,] 
+
+r.mat <- extract(simu_fit)$r[1,,]
+y.mat <- extract(simu_fit)$y[1,,]
+Real.mat <- extract(simu_fit)$Real[1,,]
+m.mat <- extract(simu_fit)$m[1,,]
+D.mat <- extract(simu_fit)$D[1,,]
+b.mat <- extract(simu_fit)$b[1,,]
+R.mat <- extract(simu_fit)$R[1,,]
+sigma.mat <- extract(simu_fit)$sigma[1,,]
+
+Real.mat[1,] %>% round(4)
+Real.mat %>% round(4) %>%  mean()
+Real.mat %>% round(4) %>%  median()
+Real.mat %>% round(4) %>%  max()
+Real.mat %>% round(4) %>%  min()
+cat("\n\n")
+r.mat[1,] %>% round(4)
+y.mat[1,] %>% round(4)
+y.mat[,1] %>% round(4) %>%  mean()
+y.mat[,1] %>% round(4) %>%  max()
+y.mat[,1] %>% round(4) %>%  min()
+
+b.mat[1,] %>% round(4)
+b.mat %>% round(4) %>%  max()
+b.mat %>% round(4) %>%  min()
+
+R.mat[1,] %>% round(4)
+R.mat %>% round(4) %>%  max()
+R.mat %>% round(4) %>%  min()
+cat("\n\n")
+m.mat[1,] %>% round(4)
+D.mat[1,] %>% round(4)
+D.mat %>% round(4) %>%  mean()
+D.mat %>% round(4) %>%  max()
+D.mat %>% round(4) %>%  min()
+cat("\n\n")
+sigma.mat[1,] %>% round(4)
+sigma.mat %>% round(4) %>%  mean()
+sigma.mat %>% round(4) %>%  median()
+sigma.mat %>% round(4) %>%  max()
+sigma.mat %>% round(4) %>%  min()
+
+# Prepare SSM data for estimation using MCMC
+#N_new = 3
+SSM_data <- list(J = J,
+                 N = N, 
+                 Q = Q,
+                 q = q,   
+                 S = S,
+                 I = I,
+                 K = K,
+                 H = H,
+                 L = L,
+#mu_base = mu_base,
+rho = rho,
+                 r = r.mat, 
+                 T = T.l,
+                 Z = Z.l,
+                 X = X.l,
+                 G = G.l#,
+                 # Z_new = Z[1:N_new,],
+                 # N_new = N_new
+                 )
+
+#stan_rdump(names(SSM_data), file = "SSM_data_J54b.dat", envir = list2env(SSM_data)) 
+
+```
+
+# Fit the full model (by referring to the debug model) to estimate underlying parameters
+```{r}
+
+#pdf("Rplots_1450,65,0.9,3ch.pdf")
+#=================================
+metric = "diag_"#"dense_"#
+#=================================
+n_iter = 8#00#1000#1400#2000#2000#3000
+n_refresh = max(2, n_iter/10)
+n_warmup = 6#00#600#1000
+#n_warmup = n_iter/2 
+n_chains = 1#4#3
+
+
+
+initf2 <- function(chain_id = 1) {
+  list(mu_alpha = mu_alpha, beta = beta, theta = theta, ab_mu = ab_mu, #shape = shape,
+       s = s, p = p, g = g, w = w, d = d, mu_season = mu_season, sd_season = sd_season,
+       mu_u1 = mu_u1, #u = array(y_LT, dim = c(J,N)),
+       rho = rho, sd_y = sd_y, mu_base = mu_base, sd_base = sd_base) #, sd_gamma = sd_gamma, sd_omega = sd_omega)
+  }
+# generate a list of lists to specify initial values
+init_ll <- lapply(1:n_chains, function(id) initf2(chain_id = id))
+
+# Run the full model and refer to the debug model to save compilation time 
+system.time({
+fit2 <- stan(
+#fit1 <- stan(
+  
+file = "SSM0.5.2c.stan",  # Stan program
+#  file = "SSM2.4.stan",  # Stan program
+  data = SSM_data,    # named list of data
+#  model_code = SSM@model_code, 
+#  fit = fit0_debug,   # to save compilation time if the debug model was run
+  control = list(adapt_delta = 0.8,#0.85,#9,#8, #9
+#                 adapt_engaged = 1,
+# adapt_init_buffer = 75,
+# adapt_term_buffer = 50
+ adapt_window = 10,#12,#15,#25,
+#                 stepsize = 0.05, #0.05, #0.01
+                 metric = paste0(metric, "e"),
+                 max_treedepth = 11#12
+                 ),#15),    # adjust when there're divergent transitions after warmup
+
+  init = init_ll, 
+  chains = n_chains,#1,#8,             # default is 4 Markov chains
+#  cores = 8,
+  seed = 3412, 
+#save_warmup = TRUE,
+  iter = n_iter,#4000,#7000,#12000, #500 #2000,            # total number of iterations per chain
+  warmup = n_warmup,#500,          # number of warmup iterations per chain
+  refresh = n_refresh#500          # = 0 means no progress shown
+  )
+})
+
+# Prepare objects for bayesplot::
+metric = "diag_"#""#"dense_"
+fit.ar <- as.array(fit2)
+lp <- log_posterior(fit2)
+np <- nuts_params(fit2)  # nuts parameters
+
+#fit2 <- fit1
+#save(fit2 , file="fit2.rda")#, file="/scratch/city/fit2.rda")
+# beepr::beep()
+
+```
+
+# Summary of the posterior sample 
+```{r} 
+#====================================================
+  # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
+  # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.62, 0.68) ; p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
+  # w = c(0.72, 0.15, 0.62)  
+# d = c(0.05, 0.7, 0.25) 
+#====================================================
+
+print(fit2, c(
+              "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
+              "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
+#              "s",
+              "p",
+              "g", 
+              "w", 
+              "d", 
+              "gw_mu", "gw_sd", "gw_L", "gw_err", 
+              "p_mu", "p_sd", "p_L", "p_err", 
+              "ab_mu", "ab_sd", "ab_L", "ab_err"
+              ), 
+      probs = c(0.05, 0.5, 0.95), digits = 3) #, probs = c(.05,.95))
+
+cat("\nn_leapfrog:\n")
+get_num_leapfrog_per_iteration(fit2) %>% summary()
+cat("\nelapsed_time:\n")
+get_elapsed_time(fit2)
+cat("\nsampler_params chain[[1]]:\n")
+get_sampler_params(fit2)[[1]] %>% summary()
+cat("\nseed:\n")
+get_seed(fit2)
+cat("\n")
+
+#====================================================
+  # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
+  # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
+  # w = c(0.72, 0.15, 0.62)  
+# d = c(0.05, 0.7, 0.25) 
+#====================================================
+
+```
+
+
+```{r, fig.width=10, fig.height=7}
+#```{r}
+
+color_scheme_set("brightblue") # see help("color_scheme_set")
+energy <- nuts_params(fit2) %>% 
+   mcmc_nuts_energy(np)  
+
+energy + labs(
+    title = paste0("Energy plot - ", metric) 
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+# 
+# mcmc_nuts_divergence(np, lp)
+ 
+# help("color_scheme_set") 
+color_scheme_set("viridis")    
+mcmc_trace(fit.ar, pars = "p[1]", #np = np, 
+           n_warmup = 600, #window = c(1,900)
+           ) #+ xlab("Post-warmup iteration")
+
+```
+
+
+```{r, eval=F}
+#library(shinystan)
+#??? ss_complete_pool <- extract(fit2);
+
+library(shinystan)
+ss_output <- launch_shinystan(as.shinystan(fit2, 
+                              pars=c(
+#              "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
+              "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
+#              "s",
+              "p",
+              "g", 
+              "w", 
+              "d", 
+              "p_mu", "p_sd", "p_L", "p_err", 
+              "gw_mu", "gw_sd", "gw_L", "gw_err", 
+              "ab_mu", "ab_sd", "ab_L", "ab_err"
+              )))
+
+```
+
+
+
+# "sd_y", "mu_u1", "mu_alpha", "beta", "theta", "sd_season"
+```{r, fig.width=8.3, fig.height=11.7}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit2, pars = c(
+                                 "sd_y", "mu_u1", 
+                                 "mu_alpha", "beta", 
+                                 "theta", "sd_season"#,
+                                 # "mu_season[1]", "mu_season[2]", "mu_season[3]"#, 
+                                 # "p[1]", "p[2]", "p[3]",
+                                 # "g[1]", "g[2]", 
+                                 # "w[1]", "w[2]", "w[3]",
+                                 # "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+# "mu_season[1]", "mu_season[2]", "mu_season[3]", "p[1]", "p[2]", "p[3]"
+```{r, fig.width=8.3, fig.height=11.7}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit2, pars = c(
+                                 # "sd_y", "mu_u1", 
+                                 # "mu_alpha", "beta", 
+                                 # "theta", "sd_season", 
+                                 "mu_season[1]", "mu_season[2]", "mu_season[3]", 
+                                 "p[1]", "p[2]", "p[3]"#,
+                                 # "g[1]", "g[2]", 
+                                 # "w[1]", "w[2]", "w[3]",
+                                 # "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+# "g[1]", "g[2]"
+```{r, fig.width=8.3, fig.height=3.9}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit2, pars = c(
+                                 # "sd_y", "mu_u1", 
+                                 # "mu_alpha", "beta", 
+                                 # "theta", "sd_season", 
+                                 # "mu_season[1]", "mu_season[2]", "mu_season[3]"#, 
+                                 # "p[1]", "p[2]", "p[3]",
+                                 "g[1]", "g[2]"#,
+                                 # "w[1]", "w[2]", "w[3]",
+                                 # "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+# "w[1]", "w[2]", "w[3]", "d[1]", "d[2]", "d[3]"
+```{r, fig.width=8.3, fig.height=11.7}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit2, pars = c(
+                                 # "sd_y", "mu_u1", 
+                                 # "mu_alpha", "beta", 
+                                 # "theta", "sd_season", 
+                                 # "mu_season[1]", "mu_season[2]", "mu_season[3]"#, 
+                                 # "p[1]", "p[2]", "p[3]",
+                                 # "g[1]", "g[2]"#,
+                                 "w[1]", "w[2]", "w[3]",
+                                 "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+```{r, fig.width=11.7, fig.height=8.3}
+#```{r}
+
+color_scheme_set("brightblue") # see help("color_scheme_set")
+
+rhat(fit2) %>% 
+  mcmc_rhat() + 
+    labs(title = paste0("Rhat - ", metric)
+         )
+
+neff_ratio(fit2) %>% 
+  mcmc_neff(size = 2) + 
+    labs(title = paste0("Relative N_eff - ", metric)
+         )
+
+```
+
+# 50% posterior predictive intervals plot
+```{r}
+ppc_intervals(
+  y = mtcars$mpg,
+  yrep = posterior_predict(fit2),
+  x = mtcars$wt,
+  prob = 0.5
+)
+```
+
+# Pairs plots
+```{r} 
+#par(mar = c(4, 4, 0.5, 0.5))
+knitr::opts_chunk$set(fig.width=6, fig.height=6)
+color_scheme_set("gray") #"darkgray")
+#Error: cannot allocate vector of size 782.8 Mb
+#mcmc_parcoord(posterior, np = np)
+
+#http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
+#The main problem is that large steps are required to explore the less narrow regions efficiently, but those steps become too large for navigating the narrow region. The required step size is connected to the value of tau. When tau is large it allows for large variation in theta (and requires large steps) while small tau requires small steps in theta.
+#The non-centered parameterization avoids this by sampling the eta parameter which, unlike theta, is a priori independent of tau. Then theta is computed deterministically from the parameters eta, mu and tau afterwards. Here’s the same plot as above, but with eta[1] from non-centered parameterization instead of theta[1] from the centered parameterization: 
+
+
+mcmc_pairs(fit.ar, np = np, pars = c("theta", "mu_season[1]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("d[1]", "d[2]", "d[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_season[2]", "mu_season[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]")) 
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
+
+#====================================================
+  # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
+# theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
+  # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
+# s = c(0.4, 0.15, 0.15)  
+  # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
+  # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
+  # w = c(0.72, 0.15, 0.62)  
+# d = c(0.05, 0.7, 0.25) 
+
+```
+
+
+
+# More pairs plot
+```{r, eval=F}
+
+mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_err[1]", "ab_err[2]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("p_err[1]", "p_err[2]", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_err[1]", "p_err[2]", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("p_err[1]", "p_err[2]", "ab_err[1]", "ab_err[2]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "p_mu[1]", "p_mu[2]", "p0[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "p_sd[1]", "p_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "p_err[1]", "p_err[2]"))
+ 
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_sd[1]", "ab_sd[2]", "ab_err[1]", "ab_err[2]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_sd[1]", "ab_sd[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_err[1]", "ab_err[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_alpha", "beta", "mu_u1", "sd_y")) 
+
+```
+
+
+
+# Scatter plot
+```{r, eval=F}
+color_scheme_set("darkgray")
+# mcmc_parcoord(fit.ar, np = np)
+#
+# mcmc_scatter(
+#   fit.ar,
+#   pars = c("p[1]", "sd_y"),
+# #  transform = list(beta = "log"),
+#   np = np,
+#   size = 1
+# )
+```
+
+
+
+```{r, eval=F}
+check_hmc_diagnostics(fit2)
+    # check_treedepth(fit2)
+    # check_divergences(fit2)
+    # check_energy(fit2)
+
+get_max_treedepth_iterations(fit2)
+get_divergent_iterations(fit2)
+    # get_num_max_treedepth(fit2)
+    # get_num_divergent(fit2)
+    # #get_num_leapfrog_per_iteration(fit2)
+    # get_bfmi(fit2)
+    # get_low_bfmi_chains(fit2)
+    # get_adaptation_info(fit2) # step size and full inverse mattrix
+
+```
+
+
+
+```{r}
+sessionInfo()
+```
+
+
