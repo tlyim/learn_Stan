@@ -7,7 +7,6 @@ output:
 ---
 
 
-
 ```{r}
 
 #library(tidyverse)
@@ -27,7 +26,7 @@ library(bayesplot)
 #          everything())
 # colnames(myStan.tb)
 
-metric = ""#"diag_"#"dense_"
+metric = "dense_"#"diag_"#
 csvfiles <- dir("D:/github/learn_Stan",#system.file('misc', package = 'rstan'), 
 #                pattern = '^samples[1-4].csv', full.names = TRUE)
                 pattern = paste0("^", metric, "samples[1-8].csv"), full.names = TRUE)
@@ -69,6 +68,12 @@ print(fit, c(
 
 cat("\nn_leapfrog:\n")
 get_num_leapfrog_per_iteration(fit) %>% summary()
+cat("\nelapsed_time:\n")
+get_elapsed_time(fit)
+cat("\nsampler_params chain[[1]]:\n")
+get_sampler_params(fit)[[1]] %>% summary()
+cat("\nseed:\n")
+get_seed(fit)
 cat("\n")
 
 #====================================================
@@ -84,6 +89,214 @@ cat("\n")
 
 ```
 
+
+```{r, eval=F}
+check_hmc_diagnostics(fit)
+    # check_treedepth(fit)
+    # check_divergences(fit)
+    # check_energy(fit)
+
+get_max_treedepth_iterations(fit)
+get_divergent_iterations(fit)
+    # get_num_max_treedepth(fit)
+    # get_num_divergent(fit)
+    # #get_num_leapfrog_per_iteration(fit)
+    # get_bfmi(fit)
+    # get_low_bfmi_chains(fit)
+    # get_adaptation_info(fit) # step size and full inverse mattrix
+
+```
+
+
+```{r, fig.width=11.7, fig.height=8.3}
+#```{r}
+
+
+color_scheme_set("brightblue") # see help("color_scheme_set")
+energy <- nuts_params(fit) %>% 
+   mcmc_nuts_energy(np)  
+
+energy + labs(
+    title = paste0("Energy plot - ", metric) 
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+# 
+# mcmc_nuts_divergence(np, lp)
+ 
+# help("color_scheme_set") 
+color_scheme_set("viridis")    
+mcmc_trace(fit2.ar, pars = "p[1]", #np = np, 
+           n_warmup = 600, #window = c(1,900)
+           ) #+ xlab("Post-warmup iteration")
+
+```
+
+
+# "sd_y", "mu_u1", "mu_alpha", "beta", "theta", "sd_season"
+```{r, fig.width=8.3, fig.height=11.7}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit, pars = c(
+                                 "sd_y", "mu_u1", 
+                                 "mu_alpha", "beta", 
+                                 "theta", "sd_season"#,
+                                 # "mu_season[1]", "mu_season[2]", "mu_season[3]"#, 
+                                 # "p[1]", "p[2]", "p[3]",
+                                 # "g[1]", "g[2]", 
+                                 # "w[1]", "w[2]", "w[3]",
+                                 # "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+# "mu_season[1]", "mu_season[2]", "mu_season[3]", "p[1]", "p[2]", "p[3]"
+```{r, fig.width=8.3, fig.height=11.7}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit, pars = c(
+                                 # "sd_y", "mu_u1", 
+                                 # "mu_alpha", "beta", 
+                                 # "theta", "sd_season", 
+                                 "mu_season[1]", "mu_season[2]", "mu_season[3]", 
+                                 "p[1]", "p[2]", "p[3]"#,
+                                 # "g[1]", "g[2]", 
+                                 # "w[1]", "w[2]", "w[3]",
+                                 # "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+# "g[1]", "g[2]"
+```{r, fig.width=8.3, fig.height=3.9}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit, pars = c(
+                                 # "sd_y", "mu_u1", 
+                                 # "mu_alpha", "beta", 
+                                 # "theta", "sd_season", 
+                                 # "mu_season[1]", "mu_season[2]", "mu_season[3]"#, 
+                                 # "p[1]", "p[2]", "p[3]",
+                                 "g[1]", "g[2]"#,
+                                 # "w[1]", "w[2]", "w[3]",
+                                 # "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+# "w[1]", "w[2]", "w[3]", "d[1]", "d[2]", "d[3]"
+```{r, fig.width=8.3, fig.height=11.7}
+#```{r}
+
+#par(mar = c(4, 4, 0.5, 0.5))
+#knitr::opts_chunk$set(fig.width=6, fig.height=9)
+#color_scheme_set("viridis")  
+trace <- traceplot(fit, pars = c(
+                                 # "sd_y", "mu_u1", 
+                                 # "mu_alpha", "beta", 
+                                 # "theta", "sd_season", 
+                                 # "mu_season[1]", "mu_season[2]", "mu_season[3]"#, 
+                                 # "p[1]", "p[2]", "p[3]",
+                                 # "g[1]", "g[2]"#,
+                                 "w[1]", "w[2]", "w[3]",
+                                 "d[1]", "d[2]", "d[3]"
+                                 ), include=TRUE,
+#          nrow = 2, 
+          ncol = 1,
+#          window=c(1,200),
+#           unconstrain = FALSE,
+           size = 0.5,#0.25,
+           inc_warmup = TRUE
+          ) + ylim(-0.2, 1.1)#3)
+
+trace + 
+  scale_color_discrete() + theme(legend.position = "top") + 
+  labs(
+#    x = "Weight (1000 lbs)",
+    y = "parameter value",
+    title = paste0("Traceplot - ", metric)
+#    title = "50% posterior predictive intervals \nvs observed miles per gallon",
+#    subtitle = "by vehicle weight"
+  )
+
+```
+
+```{r, fig.width=11.7, fig.height=8.3}
+#```{r}
+
+color_scheme_set("brightblue") # see help("color_scheme_set")
+
+rhat(fit) %>% 
+  mcmc_rhat() + 
+    labs(title = paste0("Rhat - ", metric)
+         )
+
+neff_ratio(fit) %>% 
+  mcmc_neff(size = 2) + 
+    labs(title = paste0("Relative N_eff - ", metric)
+         )
+
+```
 
 # Pairs plots
 ```{r} 
@@ -136,7 +349,6 @@ mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[
 ```
 
 
-
 # More pairs plot
 ```{r, eval=F}
 
@@ -164,24 +376,8 @@ mcmc_pairs(fit.ar, np = np, pars = c("mu_alpha", "beta", "mu_u1", "sd_y"))
 ```
 
 
-```{r, eval=F}
-check_hmc_diagnostics(fit)
-    # check_treedepth(fit)
-    # check_divergences(fit)
-    # check_energy(fit)
-
-get_max_treedepth_iterations(fit)
-get_divergent_iterations(fit)
-    # get_num_max_treedepth(fit)
-    # get_num_divergent(fit)
-    # #get_num_leapfrog_per_iteration(fit)
-    # get_bfmi(fit)
-    # get_low_bfmi_chains(fit)
-```
-
-
 # Scatter plot
-```{r}
+```{r, eval=F}
 color_scheme_set("darkgray")
 # mcmc_parcoord(fit.ar, np = np)
 #
@@ -192,63 +388,6 @@ color_scheme_set("darkgray")
 #   np = np,
 #   size = 1
 # )
-```
-
-
-```{r, fig.width=10, fig.height=3.5}
-#```{r}
-
-# help("color_scheme_set") 
-color_scheme_set("viridis")    
-mcmc_trace(fit.ar, pars = "p[1]", np = np, 
-           n_warmup = 400, window = c(1,600)
-           ) #+ xlab("Post-warmup iteration")
-
-color_scheme_set("brightblue") # see help("color_scheme_set")
-energy <- nuts_params(fit) %>% 
-   mcmc_nuts_energy(np)
-
-energy
-# 
-# mcmc_nuts_divergence(np, lp)
- 
-```
-
-
-```{r, fig.width=10, fig.height=14}
-#```{r}
-
-#par(mar = c(4, 4, 0.5, 0.5))
-#knitr::opts_chunk$set(fig.width=6, fig.height=9)
-#color_scheme_set("viridis")  
-trace <- traceplot(fit, pars = c("p[1]", "p[3]",
-                        "mu_alpha", "beta"
-                        ), include=TRUE,
-#          nrow = 2, 
-          ncol = 1,
-#          window=c(1,200),
-#           unconstrain = FALSE,
-           size = 0.5,#0.25,
-           inc_warmup = TRUE
-          ) + ylim(-0.5, 1.5)#3)
-
-trace + 
-  scale_color_discrete() + theme(legend.position = "top")
-
-```
-
-
-```{r, fig.width=10, fig.height=3.5}
-#```{r}
-
-color_scheme_set("brightblue") # see help("color_scheme_set")
-
-rhat(fit) %>% 
-  mcmc_rhat()
-
-neff_ratio(fit) %>% 
-  mcmc_neff(size = 2)
-
 ```
 
 
@@ -272,8 +411,6 @@ ss_output <- launch_shinystan(as.shinystan(fit,
               )))
 
 ```
-
-
 
 ```{r}
 sessionInfo()
