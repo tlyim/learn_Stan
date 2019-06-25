@@ -26,7 +26,9 @@ library(bayesplot)
 #          everything())
 # colnames(myStan.tb)
 
+#=================================
 metric = "dense_"#"diag_"#
+#=================================
 csvfiles <- dir("D:/github/learn_Stan",#system.file('misc', package = 'rstan'), 
 #                pattern = '^samples[1-4].csv', full.names = TRUE)
                 pattern = paste0("^", metric, "samples[1-8].csv"), full.names = TRUE)
@@ -90,24 +92,6 @@ cat("\n")
 ```
 
 
-```{r, eval=F}
-check_hmc_diagnostics(fit)
-    # check_treedepth(fit)
-    # check_divergences(fit)
-    # check_energy(fit)
-
-get_max_treedepth_iterations(fit)
-get_divergent_iterations(fit)
-    # get_num_max_treedepth(fit)
-    # get_num_divergent(fit)
-    # #get_num_leapfrog_per_iteration(fit)
-    # get_bfmi(fit)
-    # get_low_bfmi_chains(fit)
-    # get_adaptation_info(fit) # step size and full inverse mattrix
-
-```
-
-
 ```{r, fig.width=11.7, fig.height=8.3}
 #```{r}
 
@@ -126,9 +110,31 @@ energy + labs(
  
 # help("color_scheme_set") 
 color_scheme_set("viridis")    
-mcmc_trace(fit2.ar, pars = "p[1]", #np = np, 
+mcmc_trace(fit.ar, pars = "p[1]", #np = np, 
            n_warmup = 600, #window = c(1,900)
            ) #+ xlab("Post-warmup iteration")
+
+```
+
+
+```{r, eval=F}
+#library(shinystan)
+#??? ss_complete_pool <- extract(fit);
+
+library(shinystan)
+ss_output <- launch_shinystan(as.shinystan(fit, 
+                              pars=c(
+#              "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
+              "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
+#              "s",
+              "p",
+              "g", 
+              "w", 
+              "d", 
+              "p_mu", "p_sd", "p_L", "p_err", 
+              "gw_mu", "gw_sd", "gw_L", "gw_err", 
+              "ab_mu", "ab_sd", "ab_L", "ab_err"
+              )))
 
 ```
 
@@ -298,6 +304,18 @@ neff_ratio(fit) %>%
 
 ```
 
+
+# 50% posterior predictive intervals plot
+```{r}
+ppc_intervals(
+  y = mtcars$mpg,
+  yrep = posterior_predict(fit2),
+  x = mtcars$wt,
+  prob = 0.5
+)
+```
+
+
 # Pairs plots
 ```{r} 
 
@@ -392,25 +410,23 @@ color_scheme_set("darkgray")
 
 
 ```{r, eval=F}
-#library(shinystan)
-#??? ss_complete_pool <- extract(fit);
+check_hmc_diagnostics(fit)
+    # check_treedepth(fit)
+    # check_divergences(fit)
+    # check_energy(fit)
 
-library(shinystan)
-ss_output <- launch_shinystan(as.shinystan(fit, 
-                              pars=c(
-#              "sd_y", "mu_u1", "mu_alpha", "beta", #"rho", 
-              "theta", "sd_season", "mu_season", #"sd_base", #"mu_base", 
-#              "s",
-              "p",
-              "g", 
-              "w", 
-              "d", 
-              "p_mu", "p_sd", "p_L", "p_err", 
-              "gw_mu", "gw_sd", "gw_L", "gw_err", 
-              "ab_mu", "ab_sd", "ab_L", "ab_err"
-              )))
+get_max_treedepth_iterations(fit)
+get_divergent_iterations(fit)
+    # get_num_max_treedepth(fit)
+    # get_num_divergent(fit)
+    # #get_num_leapfrog_per_iteration(fit)
+    # get_bfmi(fit)
+    # get_low_bfmi_chains(fit)
+    # get_adaptation_info(fit) # step size and full inverse mattrix
 
 ```
+
+
 
 ```{r}
 sessionInfo()
