@@ -1,12 +1,15 @@
 ---
 title: "Traceplot for CmdStan output"
-output: 
-  html_notebook:
-    fig_height: 7
-    fig_width: 7
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
 ---
 
-
+```{r, setup, include=FALSE, eval=FALSE}
+knitr::opts_chunk$set(fig.width=8.3, fig.height=11.7, collapse = FALSE)
+```
+ 
 ```{r}
 
 #library(tidyverse)
@@ -90,11 +93,10 @@ cat("\n")
 #====================================================
 
 ```
-
+ 
 
 ```{r, fig.width=11.7, fig.height=8.3}
 #```{r}
-
 
 color_scheme_set("brightblue") # see help("color_scheme_set")
 energy <- nuts_params(fit) %>% 
@@ -306,7 +308,7 @@ neff_ratio(fit) %>%
 
 
 # 50% posterior predictive intervals plot
-```{r}
+```{r, eval=F}
 ppc_intervals(
   y = mtcars$mpg,
   yrep = posterior_predict(fit2),
@@ -317,7 +319,7 @@ ppc_intervals(
 
 
 # Pairs plots
-```{r} 
+```{r, fig.width=7, fig.height=6}
 
 #par(mar = c(4, 4, 0.5, 0.5))
 knitr::opts_chunk$set(fig.width=6, fig.height=6)
@@ -354,7 +356,7 @@ mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[
 mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
 mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
 
-#====================================================
+#==================================================== 
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
 # theta = 0.15; rho = 1, # sd_base = 0.2; mu_base = -1.6 
   # sd_season = 0.1, mu_season = c(-0.12, -0.06, 0.15); 
@@ -362,13 +364,13 @@ mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[
   # p = c(0.7, 0.62, 0.68); p = c(0.7, 0.62, 0.35) [inv_logit()]; p = c(0.72, 0.42) #p[3]=0.7
   # g = c(0.85, 0.35)       #old: g = c(0.2, 0.2, 0.25) 
   # w = c(0.72, 0.15, 0.62)  
-# d = c(0.05, 0.7, 0.25) 
+# d = c(0.05, 0.7, 0.25)
 
 ```
 
 
 # More pairs plot
-```{r, eval=F}
+```{r, fig.width=7, fig.height=6, eval=F}
 
 mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_mu[1]", "ab_mu[2]"))
 mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_sd[1]", "ab_sd[2]"))
@@ -394,7 +396,7 @@ mcmc_pairs(fit.ar, np = np, pars = c("mu_alpha", "beta", "mu_u1", "sd_y"))
 ```
 
 
-# Scatter plot
+# Scatter plot 
 ```{r, eval=F}
 color_scheme_set("darkgray")
 # mcmc_parcoord(fit.ar, np = np)

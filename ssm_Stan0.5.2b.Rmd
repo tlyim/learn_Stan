@@ -61,8 +61,8 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 90#60#42#40#45#20 #200     # number of firms
-N = 4*15#25#30#18#15#5#15   #number of (quarterly) observations of a firm
+J = 150#60#42#40#45#20 #200     # number of firms
+N = 4*25#25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
 rho = 1#2#5  # curvature of the soft-clipping function; rho=50 would make nearly hard-clipping
@@ -289,8 +289,11 @@ rho = rho,
                  # Z_new = Z[1:N_new,],
                  # N_new = N_new
                  )
+```
 
-#stan_rdump(names(SSM_data), file = "SSM_data_J54b.dat", envir = list2env(SSM_data)) 
+
+```{r}
+#stan_rdump(names(SSM_data), file = "SSM_data_J150.dat", envir = list2env(SSM_data)) 
 
 ```
 

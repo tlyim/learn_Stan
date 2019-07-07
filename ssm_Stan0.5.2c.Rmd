@@ -61,7 +61,7 @@ options(mc.cores = parallel::detectCores())  #
 # Can consider J=42,N=4*18 for model dev process only  
 #   but J=45,N=4*20 gives more reasonable estimates  
 #===========================================
-J = 40#90#60#42#40#45#20 #200     # number of firms
+J = 90#60#42#40#45#20 #200     # number of firms
 N = 4*15#25#30#18#15#5#15   #number of (quarterly) observations of a firm
 Q = 4 # quarterly time series
 
@@ -301,11 +301,11 @@ rho = rho,
 #=================================
 metric = "diag_"#"dense_"#
 #=================================
-n_iter = 8#00#1000#1400#2000#2000#3000
+n_iter = 800#1000#1400#2000#2000#3000
 n_refresh = max(2, n_iter/10)
-n_warmup = 6#00#600#1000
+n_warmup = 600#600#1000
 #n_warmup = n_iter/2 
-n_chains = 1#4#3
+n_chains = 4#3
 
 
 
@@ -328,14 +328,14 @@ file = "SSM0.5.2c.stan",  # Stan program
   data = SSM_data,    # named list of data
 #  model_code = SSM@model_code, 
 #  fit = fit0_debug,   # to save compilation time if the debug model was run
-  control = list(adapt_delta = 0.8,#0.85,#9,#8, #9
+  control = list(adapt_delta = 0.82,#0.89_800max,#0.88_2dvg,# 0.955,#0.95_1dvg,#0.82,#0.85,#8, #9
 #                 adapt_engaged = 1,
-# adapt_init_buffer = 75,
-# adapt_term_buffer = 50
- adapt_window = 10,#12,#15,#25,
+ adapt_init_buffer = 75,#85,#75
+ adapt_term_buffer = 50,#150,
+ adapt_window = 25,#35,#10,#12,#15,
 #                 stepsize = 0.05, #0.05, #0.01
                  metric = paste0(metric, "e"),
-                 max_treedepth = 11#12
+                 max_treedepth = 12#12#11
                  ),#15),    # adjust when there're divergent transitions after warmup
 
   init = init_ll, 
@@ -382,8 +382,8 @@ print(fit2, c(
               "g", 
               "w", 
               "d", 
-              "gw_mu", "gw_sd", "gw_L", "gw_err", 
-              "p_mu", "p_sd", "p_L", "p_err", 
+              "pgw_mu", "pgw_sd", "pgw_L", "pgw_err", 
+#              "p_mu", "p_sd", "p_L", "p_err", 
               "ab_mu", "ab_sd", "ab_L", "ab_err"
               ), 
       probs = c(0.05, 0.5, 0.95), digits = 3) #, probs = c(.05,.95))
@@ -625,7 +625,7 @@ neff_ratio(fit2) %>%
 ```
 
 # 50% posterior predictive intervals plot
-```{r}
+```{r, eval=F}
 ppc_intervals(
   y = mtcars$mpg,
   yrep = posterior_predict(fit2),
@@ -635,7 +635,7 @@ ppc_intervals(
 ```
 
 # Pairs plots
-```{r} 
+```{r, fig.width=7, fig.height=6} 
 #par(mar = c(4, 4, 0.5, 0.5))
 knitr::opts_chunk$set(fig.width=6, fig.height=6)
 color_scheme_set("gray") #"darkgray")
@@ -651,25 +651,39 @@ mcmc_pairs(fit.ar, np = np, pars = c("theta", "mu_season[1]", "mu_season[2]", "m
 
 mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "theta", "mu_season[1]"))
 mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]")) 
+mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "d[1]", "d[2]", "d[3]")) 
+
 mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "theta", "mu_season[1]"))
 mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "pgw_mu[1]", "pgw_mu[2]", "pgw_mu[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "pgw_mu[1]", "p[2]", "p[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "pgw_mu[2]", "g[2]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "pgw_mu[3]", "w[2]", "w[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
 
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "theta", "mu_season[1]"))
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "mu_season[2]", "mu_season[3]"))
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "theta", "mu_season[1]"))
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[3]", "gw_mu[4]", "gw_mu[5]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[1]", "pgw_mu[2]", "pgw_mu[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[1]", "pgw_mu[2]", "pgw_mu[3]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[1]", "pgw_mu[2]", "pgw_mu[3]", "d[1]", "d[2]", "d[3]"))
 
-mcmc_pairs(fit.ar, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "theta", "mu_season[1]"))
-mcmc_pairs(fit.ar, np = np, pars = c("p_mu[1]", "p_mu[2]", "p_mu[3]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[1]", "p[2]", "p[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[1]", "p[2]", "p[3]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[1]", "p[2]", "p[3]", "d[1]", "d[2]", "d[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[2]", "g[2]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[2]", "g[2]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[2]", "g[2]", "d[1]", "d[2]", "d[3]"))
+
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[3]", "w[2]", "w[3]", "theta", "mu_season[1]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[3]", "w[2]", "w[3]", "mu_season[2]", "mu_season[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[3]", "w[2]", "w[3]", "d[1]", "d[2]", "d[3]"))
+
 mcmc_pairs(fit.ar, np = np, pars = c("d[1]", "d[2]", "d[3]", "theta", "mu_season[1]"))
 mcmc_pairs(fit.ar, np = np, pars = c("d[1]", "d[2]", "d[3]", "mu_season[2]", "mu_season[3]"))
 
-mcmc_pairs(fit.ar, np = np, pars = c("mu_u1", "sd_y", "ab_mu[1]", "ab_mu[2]")) 
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "gw_mu[3]", "gw_mu[4]", "gw_mu[5]"))
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
-mcmc_pairs(fit.ar, np = np, pars = c("gw_mu[1]", "gw_mu[2]", "d[1]", "d[2]", "d[3]"))
-mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "p_mu[1]", "p_mu[2]", "p_mu[3]"))
-mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[2]", "g[2]", "pgw_mu[1]", "p[2]", "p[3]"))
+mcmc_pairs(fit.ar, np = np, pars = c("pgw_mu[2]", "g[2]", "pgw_mu[3]", "w[2]", "w[3]"))
+
 
 #====================================================
   # sd_y = 0.08, mu_u1 = y_LT = 0.1; mu_alpha = 0.04; beta = 0.6;  
@@ -686,7 +700,7 @@ mcmc_pairs(fit.ar, np = np, pars = c("ab_mu[1]", "ab_mu[2]", "d[1]", "d[2]", "d[
 
 
 # More pairs plot
-```{r, eval=F}
+```{r, fig.width=7, fig.height=6, eval=F}
 
 mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_mu[1]", "ab_mu[2]"))
 mcmc_pairs(fit.ar, np = np, pars = c("p_sd[1]", "p_sd[2]", "ab_sd[1]", "ab_sd[2]"))
