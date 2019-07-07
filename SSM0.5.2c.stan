@@ -40,7 +40,7 @@ real<lower=0> theta; //reduction in alpha[j,n] from the initial level (mu_alpha)
     vector[2] ab_err; // primitive vector of correlated coeffs in w
 //===============================================================================
 
-vector[I-1] p_raw;
+vector[I-2] p_raw;
 vector[K-1] g_raw;
 vector[H-1] w_raw;
 
@@ -48,10 +48,10 @@ vector[H-1] w_raw;
 //  vector[K] g; // coefficients of the K covariates in matrix X
             //vector[K - K_cor] g0; // vector of means for correlated coeffs in w
 //!!! Trying to require >= 0 to get ride of an unreasonable second mode             
-vector<lower=0>[3] pgw_mu; //<lower=0> vector of means for correlated coeffs in w
-    vector<lower=0>[3] pgw_sd; // vector of sd for correlated coeffs in w
-    cholesky_factor_corr[3] pgw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
-    vector[3] pgw_err; // primitive vector of correlated coeffs in w
+vector<lower=0>[4] pgw_mu; //<lower=0> vector of means for correlated coeffs in w
+    vector<lower=0>[4] pgw_sd; // vector of sd for correlated coeffs in w
+    cholesky_factor_corr[4] pgw_L; // Cholesky factor of correlation matrix for correlated coeffs in w
+    vector[4] pgw_err; // primitive vector of correlated coeffs in w
 /*
 real g1;
 real g2;
@@ -115,12 +115,15 @@ transformed parameters {
 }    
 //===============================================================================
 {
-  vector[3] pgw; // modeling g and w together to capture their correlations
+  vector[4] pgw; // modeling g and w together to capture their correlations
   pgw = pgw_mu + pgw_sd .* (pgw_L * pgw_err);
     p[1] = pgw[1];
     g[1] = pgw[2];
     w[1] = pgw[3];
-    p[2:I] = p_raw[1:I-1];
+    
+    p[3] = pgw[4];
+    
+    p[2:I-1] = p_raw[1:I-2];
     g[2:K] = g_raw[1:K-1];
     w[2:H] = w_raw[1:H-1];
 }    
